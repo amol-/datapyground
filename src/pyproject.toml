@@ -1,0 +1,9 @@
+[project]
+name = "datapyground"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyarrow>=17.0.0",
+]
