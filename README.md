@@ -80,7 +80,7 @@ in the future, but that will have to happen when the benefit they provide
 outweights the added complexity they introduce in the context of a learning
 project.
 
-### Setup development environment
+### Setup development environment
 
 Install `uv` python package:
 
@@ -94,7 +94,7 @@ Then install the dependencies and the project in editable mode:
 uv sync --dev
 ```
 
-### Running tests
+### Running tests
 
 ```bash
 uv run pytest -v
