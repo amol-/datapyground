@@ -56,4 +56,5 @@ if __name__ == "__main__":
 
     import timeit
     print("DataPyground Timing:", timeit.timeit(run_with_datapyground, number=1))
+    print("")
     print("Pandas Timing:", timeit.timeit(run_with_pandas, number=1))
