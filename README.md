@@ -1,3 +1,5 @@
+![DataPyground](docs/logo.png)
+
 # DataPyground
 
 Data Analysis framework and Compute Engine for fun,
