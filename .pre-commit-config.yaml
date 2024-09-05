@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: Ruff linter
+        entry: .venv/bin/ruff check # Ruff installed by uv
+        language: system
+        types: [python]
+        # While it's not efficient, and generally is not necessary,
+        # It's a bit more robust to run ruff on the entire project
+        # rather than just the changed files.
+        pass_filenames: false
+        always_run: true

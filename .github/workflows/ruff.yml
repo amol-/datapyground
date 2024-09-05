@@ -1,0 +1,27 @@
+name: Ruff Lint
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+      
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install ruff
+
+      - name: Run Ruff linter
+        run: |
+          source venv/bin/activate
+          ruff check --output-format=github .

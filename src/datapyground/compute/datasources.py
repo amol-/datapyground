@@ -17,3 +17,11 @@ class CSVDataSource(QueryPlanNode):
         with pa.csv.open_csv(self.filename) as reader:
             for batch in reader:
                 yield batch
+
+
+class PyArrowTableDataSource(QueryPlanNode):
+  def __init__(self, table: pa.Table) -> None:
+    self.table = table
+
+  def batches(self) -> Iterator[pa.RecordBatch]:
+    yield from self.table.to_batches()
