@@ -1,4 +1,4 @@
-![DataPyground](docs/logo.png)
+![DataPyground](docs/logo.png | width=200)
 
 # DataPyground
 
