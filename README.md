@@ -79,3 +79,23 @@ this does not prevent the use of c extensions and cython for performance
 in the future, but that will have to happen when the benefit they provide
 outweights the added complexity they introduce in the context of a learning
 project.
+
+### Setup development environment
+
+Install `uv` python package:
+
+```bash
+pip install uv
+```
+
+Then install the dependencies and the project in editable mode:
+
+```bash
+uv sync --dev
+```
+
+### Running tests
+
+```bash
+uv run pytest -v
+```
