@@ -1,6 +1,7 @@
 import pyarrow as pa
 
 from .base import Expression
+from .. import utils
 
 
 def apply_expression_if_needed(batch, o):
@@ -28,7 +29,8 @@ class FunctionCallExpression(Expression):
         self.args = args
 
     def __str__(self) -> str:
-        return f"{self.func}({','.join(self.args)})"
+        func_qualname = utils.inspect.get_qualname(self.func)
+        return f"{func_qualname}({','.join(map(str, self.args))})"
 
     def apply(self, batch: pa.RecordBatch) -> pa.Array:
         args = tuple(
