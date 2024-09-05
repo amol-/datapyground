@@ -2,6 +2,9 @@
 
 # DataPyground
 
+[![Tests](https://img.shields.io/github/actions/workflow/status/amol-/datapyground/tests.yml?branch=main&label=tests)](https://github.com/amol-/datapyground/actions)
+[![Coverage](https://img.shields.io/coveralls/github/amol-/datapyground)](https://coveralls.io/github/amol-/datapyground)
+
 Data Analysis framework and Compute Engine for fun,
 it was started as a foundation for the **How Data Platforms Work**
 book while writing it to showcase the concepts explained in the book.
