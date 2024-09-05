@@ -1,11 +1,14 @@
 
 def run_with_datapyground():
     import pyarrow.compute as pc
-    from datapyground.compute import FilterNode, CSVDataSource, col, FunctionCallExpression
+    from datapyground.compute import FilterNode, CSVDataSource, col, FunctionCallExpression, PaginateNode
 
-    query = FilterNode(
-        FunctionCallExpression(pc.equal, col("year"), 2023),
-        CSVDataSource("data/geounits.csv")
+    query = PaginateNode(
+        offset=0, length=5,
+        child=FilterNode(
+            FunctionCallExpression(pc.equal, col("year"), 2023),
+            CSVDataSource("data/geounits.csv")
+        )
     )
     for batch in query.batches():
         print(batch)
@@ -16,7 +19,7 @@ def run_with_pandas():
 
     df = pd.read_csv("data/geounits.csv")
     df = df[df["year"] == 2023]
-    print(df)
+    print(df.head(5))
 
 
 def download_and_extract_zip(url, extract_to, new_csv_name):
@@ -50,7 +53,7 @@ if __name__ == "__main__":
         "data",
         "geounits.csv"
     )
-    import pandas as pd
-    print(pd.read_csv("data/geounits.csv").head(5) )
-    run_with_datapyground()
-    run_with_pandas()
+
+    import timeit
+    print("DataPyground Timing:", timeit.timeit(run_with_datapyground, number=1))
+    print("Pandas Timing:", timeit.timeit(run_with_pandas, number=1))
