@@ -2,7 +2,7 @@
 
 # DataPyground
 
-[![Tests](https://img.shields.io/github/actions/workflow/status/amol-/datapyground/tests.yml?branch=main&label=tests)](https://github.com/amol-/datapyground/actions)
+[![Tests](https://img.shields.io/github/actions/workflow/status/amol-/datapyground/pytest.yml?branch=main&label=tests)](https://github.com/amol-/datapyground/actions)
 [![Coverage](https://img.shields.io/coveralls/github/amol-/datapyground)](https://coveralls.io/github/amol-/datapyground)
 
 Data Analysis framework and Compute Engine for fun,
