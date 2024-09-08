@@ -35,3 +35,4 @@ intersphinx_mapping = {
 
 html_theme = 'nature'
 html_static_path = ['_static']
+html_style = "custom.css"
