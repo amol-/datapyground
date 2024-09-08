@@ -4,3 +4,11 @@ body {
     font-family: Arial, sans-serif;
     font-size: 1.2em;
 }
+
+div.body {
+    max-width: 100%;
+}
+
+div.sphinxsidebar {
+    overflow: auto;
+} 
