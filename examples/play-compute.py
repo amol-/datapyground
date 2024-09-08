@@ -4,7 +4,7 @@ from datapyground.compute import CSVDataSource, FilterNode, FunctionCallExpressi
 
 query = FilterNode(
     FunctionCallExpression(pc.equal, col("City"), "Rome"),
-    CSVDataSource("data/shops.csv")
+    CSVDataSource("data/shops.csv"),
 )
 for batch in query.batches():
     print("---")

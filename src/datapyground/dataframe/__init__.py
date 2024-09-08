@@ -1,11 +1,11 @@
 """Dataframe library built on top of datapyground.
 
-A dataframe library is a tool designed to handle and manipulate structured data, 
-typically in the form of tables (i.e., rows and columns). 
-It allows users to load data from various sources (like CSV files or databases), 
-explore it, apply transformations, and analyze it. 
+A dataframe library is a tool designed to handle and manipulate structured data,
+typically in the form of tables (i.e., rows and columns).
+It allows users to load data from various sources (like CSV files or databases),
+explore it, apply transformations, and analyze it.
 
-Dataframes provide an efficient way to perform operations such as filtering, 
+Dataframes provide an efficient way to perform operations such as filtering,
 aggregation, and merging of datasets.
 
 Dataframes are becoming a widespread and convenient

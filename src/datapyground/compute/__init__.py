@@ -17,6 +17,7 @@ The query plan nodes themselves are in charge of their execution,
 this keeps the behavior near to the node and thus makes easy to
 know how a Node is actually executed without having to look around too much.
 """
+
 from .base import ColumnRef, col
 from .datasources import CSVDataSource, PyArrowTableDataSource
 from .expressions import FunctionCallExpression

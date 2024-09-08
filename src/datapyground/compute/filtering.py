@@ -6,6 +6,7 @@ An example is the ``WHERE`` condition in SQL queries.
 
 This module implements the basic filtering capabilities.
 """
+
 from typing import Iterator
 
 import pyarrow as pa
@@ -16,12 +17,13 @@ from .expressions import Expression
 
 class FilterNode(QueryPlanNode):
     """Filter data based on a predicate expression.
-    
+
     The filter expects an expression that when applied
     to the batch of data being filtered returns ``true``
     or ``false`` for each row in the data to mark which
     rows have to be preserved and which rows have to be discarded.
     """
+
     def __init__(self, expression: Expression, child: QueryPlanNode) -> None:
         """
         :param expression: The predicate expression to filter with.
@@ -35,7 +37,7 @@ class FilterNode(QueryPlanNode):
 
     def batches(self) -> Iterator[pa.RecordBatch]:
         """Apply the filtering to the child node.
-        
+
         For each recordbatch yielded by the child node,
         apply the expression and get back a mask
         (an array of only true/false values).

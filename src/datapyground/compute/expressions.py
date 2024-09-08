@@ -14,15 +14,18 @@ for the projection, for example ``A + B``.
 More node types might need different type of expressions.
 This module implements the most common ones.
 """
+
 import pyarrow as pa
 
 from .. import utils
 from .base import Expression
 
 
-def apply_expression_if_needed(batch: pa.RecordBatch, o: Expression|pa.Array) -> pa.Array:
+def apply_expression_if_needed(
+    batch: pa.RecordBatch, o: Expression | pa.Array
+) -> pa.Array:
     """Invoke Apply on expressions when needed
-    
+
     If the provided object is an Expression,
     it will be applied to the target batch.
 
@@ -42,7 +45,7 @@ def apply_expression_if_needed(batch: pa.RecordBatch, o: Expression|pa.Array) ->
 
 class FunctionCallExpression(Expression):
     """Call a compute function on its arguments.
-    
+
     Given a compute function, and a set of arguments
     (other expressions, literals or data), execute
     the function on the provided arguments and return
@@ -51,8 +54,9 @@ class FunctionCallExpression(Expression):
     For example to sum two columns this would be used as::
 
         FunctionCallExpression(pyarrow.compute.sum, [ColumnRef("A"), ColumnRef("B")])
-    
+
     """
+
     def __init__(self, func: callable, *args: Expression) -> None:
         """
         :param func: The function accepting the arguments.
@@ -67,13 +71,11 @@ class FunctionCallExpression(Expression):
 
     def apply(self, batch: pa.RecordBatch) -> pa.Array:
         """Invoke the function resolving all argumnets on the recordbatch.
-        
+
         When the function arguments are expressions themselves,
         this will apply the expressions on the provided recordbatch
         and the resulting data will be used as the arguments for the
         function.
         """
-        args = tuple(
-            apply_expression_if_needed(batch, arg) for arg in self.args
-        )
+        args = tuple(apply_expression_if_needed(batch, arg) for arg in self.args)
         return self.func(*args)

@@ -4,6 +4,7 @@ Implements nodes whose purpose is to slice the data
 emitted by a query plan. Discarding the rows that
 are not part of the selected slice of data.
 """
+
 from typing import Iterator
 
 import pyarrow as pa
@@ -13,7 +14,7 @@ from .base import QueryPlanNode
 
 class PaginateNode(QueryPlanNode):
     """Emit only one page of the received data.
-    
+
     Given a starting index and a length, only emit
     length rows after the starting index is reached.
 
@@ -24,6 +25,7 @@ class PaginateNode(QueryPlanNode):
         1: emit
         2: skip because > length=1 and one row was already emitted.
     """
+
     def __init__(self, offset: int, length: int, child: QueryPlanNode) -> None:
         """
         :param offset: From which row to take data, first row is 0.
@@ -40,11 +42,11 @@ class PaginateNode(QueryPlanNode):
 
     def batches(self) -> Iterator[pa.RecordBatch]:
         """Apply the pagination to the child node and emit the rows.
-        
+
         Consume rows from the child node skipping those until we
         reach offset. Once offset is reached start yielding rows
-        until length is reached. 
-        
+        until length is reached.
+
         Subsequent rows are never consumed, so the child might
         not get exhausted. This requires special attention in
         resources management, because any resource open by the
@@ -68,11 +70,11 @@ class PaginateNode(QueryPlanNode):
             # some rows of the batch.
             start_in_batch = max(0, self.offset - consumed_rows)
 
-            # Now that we know where to start in the batch, 
+            # Now that we know where to start in the batch,
             # we need to compute where to end.
             # The batch might actually contain fewer rows than
             # length so we might have to keep picking rows
-            # from subsequent batches. 
+            # from subsequent batches.
             remaining_rows = self.offset + self.length - consumed_rows
             rows_in_this_batch = min(batch_size - start_in_batch, remaining_rows)
             if rows_in_this_batch > 0:

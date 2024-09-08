@@ -3,6 +3,7 @@
 This module defines the base components that are
 necessary to represent a query plan and execute it.
 """
+
 import abc
 from typing import Iterator
 
@@ -31,7 +32,7 @@ class QueryPlanNode(abc.ABC):
     more child nodes that have to be joined together.
 
     Each Node accepts :class:`pyarrow.RecordBatch`
-    data as its input and emits a new 
+    data as its input and emits a new
     :class:`pyarrow.RecordBatch` as its output.
 
     The base `QueryPlanNode` class does nothing
@@ -55,10 +56,11 @@ class QueryPlanNode(abc.ABC):
             def __str__(self):
                 return f"DebugDataNode()"
     """
+
     @abc.abstractmethod
     def batches(self) -> Iterator[pa.RecordBatch]:
         """Emits the batches for the next node.
-        
+
         Each QueryPlan node is expected to be able to
         generate data that has to be provided to the next
         node in the plan.
@@ -73,11 +75,11 @@ class QueryPlanNode(abc.ABC):
     def __str__(self) -> str:
         """Human readable representation of the node."""
         ...
-    
+
 
 class Expression(abc.ABC):
     """Expression to apply to a RecordBatch.
-    
+
     Expressions are some form of operation that
     has to be applied to the data of a :class:`pyarrow.RecordBatch`
     to create new data.
@@ -87,14 +89,15 @@ class Expression(abc.ABC):
     to column B of the RecordBatch and return the result.
 
     As our engine is Column Major, applying an expression
-    always results in a new column, thus in a 
+    always results in a new column, thus in a
     :class:`pyarrow.Array` that contains the data
     for that column.
     """
+
     @abc.abstractmethod
     def apply(self, batch: pa.RecordBatch) -> pa.Array:
         """Apply the expression to a RecordBatch.
-        
+
         Expression classes must implement this method
         to dictate what will happen when an expression
         is applied.
@@ -123,7 +126,7 @@ class Expression(abc.ABC):
 
 class ColumnRef(Expression):
     """References a column in a record batch.
-    
+
     When another expression or the engine need
     to operate on a specific column, we will
     need a way to reference that column and its data.
@@ -132,6 +135,7 @@ class ColumnRef(Expression):
     applied to a record batch returns the data for
     that column.
     """
+
     def __init__(self, name: str) -> None:
         """
         :param name: The name of the column being referenced.
@@ -141,7 +145,9 @@ class ColumnRef(Expression):
     def apply(self, batch: pa.RecordBatch) -> pa.Array:
         """Get the data for the column."""
         return batch.column(self.name)
-    
+
     def __str__(self) -> str:
         return f"ColumnRef({self.name})"
+
+
 col = ColumnRef

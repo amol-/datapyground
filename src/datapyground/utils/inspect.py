@@ -1,4 +1,5 @@
 """Provide insights about Python objects."""
+
 import inspect
 from typing import Any
 
