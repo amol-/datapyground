@@ -27,8 +27,8 @@ Install datapyground package from pip:
 pip install datapyground
 ```
 
-Once installed refer to the documentation of each component
-to learn how to use it.
+Once installed refer to the [Documentation](http://alessandro.molina.fyi/datapyground/) 
+of each component to learn how to use it.
 
 ## Documentation
 
