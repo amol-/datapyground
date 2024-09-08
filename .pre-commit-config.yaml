@@ -1,7 +1,12 @@
 repos:
   - repo: local
     hooks:
-      - id: ruff
+      - id: format
+        name: Ruff formatter
+        entry: .venv/bin/ruff format --check # Ruff installed by uv
+        language: system
+        types: [python]
+      - id: lint
         name: Ruff linter
         entry: .venv/bin/ruff check # Ruff installed by uv
         language: system

@@ -25,3 +25,9 @@ jobs:
         run: |
           source venv/bin/activate
           ruff check --output-format=github .
+
+      - name: Run Ruff Formatter
+        run: |
+          source venv/bin/activate
+          ruff format --check .
+      
