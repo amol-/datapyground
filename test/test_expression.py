@@ -1,8 +1,10 @@
-import pytest
 import pyarrow as pa
 import pyarrow.compute as pc
-from datapyground.compute.expressions import FunctionCallExpression
+import pytest
+
 from datapyground.compute.base import ColumnRef
+from datapyground.compute.expressions import FunctionCallExpression
+
 
 @pytest.fixture
 def sample_batch():

@@ -1,7 +1,14 @@
 
 def run_with_datapyground():
     import pyarrow.compute as pc
-    from datapyground.compute import FilterNode, CSVDataSource, col, FunctionCallExpression, PaginateNode
+
+    from datapyground.compute import (
+        CSVDataSource,
+        FilterNode,
+        FunctionCallExpression,
+        PaginateNode,
+        col,
+    )
 
     query = PaginateNode(
         offset=0, length=5,

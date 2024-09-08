@@ -1,7 +1,9 @@
+"""Provide insights about Python objects."""
 import inspect
+from typing import Any
 
 
-def get_qualname(obj):
+def get_qualname(obj: Any) -> str:
     """Get the qualified name of the given object.
 
     Will return the name of the object and the
@@ -10,6 +12,12 @@ def get_qualname(obj):
     For functions or methods, this will return
     something like `module.class.method` or
     `module.function`.
+
+    >>> class TestClass:
+    ...   def method(self, arg):
+    ...     pass
+    >>>  get_qualname(TestClass.method)
+    'TestClass.method'
     """
     module = inspect.getmodule(obj).__name__
     if inspect.ismethod(obj) or inspect.isfunction(obj):

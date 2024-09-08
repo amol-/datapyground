@@ -1,6 +1,6 @@
 import pyarrow.compute as pc
 
-from datapyground.compute import FilterNode, CSVDataSource, col, FunctionCallExpression
+from datapyground.compute import CSVDataSource, FilterNode, FunctionCallExpression, col
 
 query = FilterNode(
     FunctionCallExpression(pc.equal, col("City"), "Rome"),
