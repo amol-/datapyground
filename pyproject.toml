@@ -23,6 +23,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --cov=src"
+testpaths = ["test"]
 
 [tool.ruff]
 src = ["src"]
