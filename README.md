@@ -27,6 +27,9 @@ Install datapyground package from pip:
 pip install datapyground
 ```
 
+Once installed refer to the documentation of each component
+to learn how to use it.
+
 ## Documentation
 
 Each component of the data platform is self documented in a way inspired
