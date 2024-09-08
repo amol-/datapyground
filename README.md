@@ -6,8 +6,9 @@
 [![Coverage](https://img.shields.io/coveralls/github/amol-/datapyground)](https://coveralls.io/github/amol-/datapyground)
 
 Data Analysis framework and Compute Engine for fun,
-it was started as a foundation for the **How Data Platforms Work**
-book while writing it to showcase the concepts explained in the book.
+it was started as a foundation for the [**How Data Platforms Work**](https://github.com/amol-/datapyground/tree/main/book)
+book associated to the [**Monthly Python Data Engineering Newsletter**](https://alessandromolina.substack.com/) 
+while writing the book to showcase the concepts explained in the its chapters.
 
 The main priority of the codebase is to be as feature complete
 as possible while making it easy to understand and contribute to 
@@ -26,42 +27,15 @@ Install datapyground package from pip:
 pip install datapyground
 ```
 
-Then you can run it via the Query Plan interface:
-
-```python
-import pyarrow.compute as pc
-
-from datapyground.compute import FilterNode, CSVDataSource, col, FunctionCallExpression
-
-query = FilterNode(
-    FunctionCallExpression(pc.equal, col("City"), "Rome"),
-    CSVDataSource("data/shops.csv")
-)
-for batch in query.batches():
-    print(batch)
-```
-
-Or via the Dataframe API:
-
-```python
-import pyarrow.compute as pc
-
-from datapyground.compute import col, FunctionCallExpression
-from datapyground.dataframe import Dataframe
-
-Dataframe.open("shops.csv") \
-  .filter(FunctionCallExpression(pc.equal, col("City"), "Rome")) \
-  .collect()
-```
-
 ## Documentation
 
-The documentation is under progress.
+Each component of the data platform is self documented in a way inspired
+by the literate programming concept. The complete documentation
+is available at [Documentation](http://alessandro.molina.fyi/datapyground/)
 
 For further understanding of the codebase and the concepts
-reading the **How Data Platforms Work** book is recommended.
-
-**NOTE:** Book is under progress.
+reading the [**How Data Platforms Work**](https://github.com/amol-/datapyground/tree/main/book) 
+book is recommended.
 
 ## Contributing
 
@@ -99,3 +73,13 @@ uv sync --dev
 ```bash
 uv run pytest -v
 ```
+
+### Building Docs
+
+```bash
+cd docs
+uv run make html
+```
+
+The documentation is readable at ``docs/build/html``
+after being built.
