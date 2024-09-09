@@ -17,15 +17,15 @@ def get_qualname(obj: Any) -> str:
     >>> class TestClass:
     ...   def method(self, arg):
     ...     pass
-    >>>  get_qualname(TestClass.method)
-    'TestClass.method'
+    >>> get_qualname(TestClass.method)
+    'datapyground.utils.inspect.TestClass.method'
     """
     module = inspect.getmodule(obj).__name__
     if inspect.ismethod(obj) or inspect.isfunction(obj):
         if hasattr(obj, "__self__") and obj.__self__:
             class_name = obj.__self__.__class__.__name__
             return f"{module}.{class_name}.{obj.__name__}"
-        return f"{module}.{obj.__name__}"
+        return f"{module}.{obj.__qualname__}"
     elif inspect.isclass(obj):
         return f"{module}.{obj.__name__}"
     elif inspect.ismodule(obj):

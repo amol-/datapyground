@@ -16,6 +16,35 @@ This allows to easily build compute pipelines like::
 The query plan nodes themselves are in charge of their execution,
 this keeps the behavior near to the node and thus makes easy to
 know how a Node is actually executed without having to look around too much.
+
+Building a query plan requires to combine the nodes that we want
+to be executed starting with one or ore ``DataSource`` nodes as the
+leafs node of a query:
+
+>>> import pyarrow as pa
+>>> data = pa.table({
+...    "animals": pa.array(["Flamingo", "Horse", "Brittle stars", "Centipede"]),
+...    "n_legs": pa.array([2, 4, 5, 100])
+... })
+>>>
+>>> import pyarrow.compute as pc
+>>> from datapyground.compute import col, PyArrowTableDataSource
+>>> from datapyground.compute import FilterNode, FunctionCallExpression
+>>> # SELECT * FROM data WHERE n_legs >= 5
+>>> query = FilterNode(
+...     FunctionCallExpression(pc.greater_equal, col("n_legs"), 5),
+...     child=PyArrowTableDataSource(
+...         data
+...     )
+... )
+>>> for data in query.batches():
+...     print(data)
+pyarrow.RecordBatch
+animals: string
+n_legs: int64
+----
+animals: ["Brittle stars","Centipede"]
+n_legs: [5,100]
 """
 
 from .base import ColumnRef, col

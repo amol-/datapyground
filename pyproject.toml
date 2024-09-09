@@ -23,7 +23,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --cov=src"
-testpaths = ["test"]
+testpaths = ["test", "src/datapyground"]
 
 [tool.ruff]
 src = ["src"]
