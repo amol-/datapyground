@@ -3,7 +3,7 @@
 A data platform built from scratch for learning and teaching purposes.
 
 DataPyground was started as a foundation for the `How Data Platforms Work <https://github.com/amol-/datapyground/tree/main/book>`_
-book associated to the `Monthly Python Data Engineering Newsletter <https://alessandromolina.substack.com/`_
+book associated to the `Monthly Python Data Engineering Newsletter <https://alessandromolina.substack.com/>`_
 while writing the book to showcase the concepts explained in the its chapters.
 
 The platform is constituted by multiple components, each isolated within its own
