@@ -60,7 +60,7 @@ class FunctionCallExpression(Expression):
     def __init__(self, func: callable, *args: Expression) -> None:
         """
         :param func: The function accepting the arguments.
-        :param *args: The arguments for the function.
+        :param \\*args: The arguments for the function.
         """
         self.func = func
         self.args = args
