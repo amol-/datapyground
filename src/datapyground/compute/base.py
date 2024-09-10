@@ -95,7 +95,7 @@ class Expression(abc.ABC):
     """
 
     @abc.abstractmethod
-    def apply(self, batch: pa.RecordBatch) -> pa.Array:
+    def apply(self, batch: pa.RecordBatch) -> pa.Array | pa.Scalar:
         """Apply the expression to a RecordBatch.
 
         Expression classes must implement this method
@@ -134,6 +134,18 @@ class ColumnRef(Expression):
     This expression is aware of the column and when
     applied to a record batch returns the data for
     that column.
+
+    >>> import pyarrow as pa
+    >>> data = pa.record_batch({"my_column": pa.array([1, 2, 3]),
+    ...                         "othercol": pa.array([4, 5, 6])})
+    >>> column = ColumnRef("my_column")
+    >>> column.apply(data)
+    <pyarrow.lib.Int64Array object at ...>
+    [
+      1,
+      2,
+      3
+    ]
     """
 
     def __init__(self, name: str) -> None:
@@ -142,7 +154,7 @@ class ColumnRef(Expression):
         """
         self.name = name
 
-    def apply(self, batch: pa.RecordBatch) -> pa.Array:
+    def apply(self, batch: pa.RecordBatch) -> pa.Array | pa.Scalar:
         """Get the data for the column."""
         return batch.column(self.name)
 
@@ -151,3 +163,33 @@ class ColumnRef(Expression):
 
 
 col = ColumnRef
+
+
+class Literal(Expression):
+    """Literal value.
+
+    Usually the engine will automatically cast to a
+    Literal values of Python base types.
+
+    But using the literal object is helpful in cases where
+    there is the need to be explicit.
+
+    >>> str(Literal(42))
+    'Literal(<pyarrow.Int64Scalar: 42>)'
+    """
+
+    def __init__(self, value: str | int | float) -> None:
+        """
+        :param value: The literal value.
+        """
+        self.value = pa.scalar(value)
+
+    def apply(self, batch: pa.RecordBatch) -> pa.Array | pa.Scalar:
+        """Get the literal value."""
+        return self.value
+
+    def __str__(self) -> str:
+        return f"Literal({repr(self.value)})"
+
+
+lit = Literal

@@ -22,6 +22,27 @@ class FilterNode(QueryPlanNode):
     to the batch of data being filtered returns ``true``
     or ``false`` for each row in the data to mark which
     rows have to be preserved and which rows have to be discarded.
+
+    >>> import pyarrow as pa
+    >>> import pyarrow.compute as pc
+    >>> from datapyground.compute import col, lit, FunctionCallExpression, PyArrowTableDataSource
+    >>> data = pa.record_batch({"values": [1, 2, 3, 4, 5]})
+    >>> predicate = FunctionCallExpression(pc.greater, col("values"), lit(3))
+    >>> # predicate is a function that returns true for values greater than 3
+    >>> predicate.apply(data)
+    <pyarrow.lib.BooleanArray object at ...>
+    [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+    >>> next(FilterNode(predicate, PyArrowTableDataSource(data)).batches())
+    pyarrow.RecordBatch
+    values: int64
+    ----
+    values: [4,5]
     """
 
     def __init__(self, expression: Expression, child: QueryPlanNode) -> None:

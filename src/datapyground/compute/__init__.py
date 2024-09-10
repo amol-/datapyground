@@ -47,7 +47,7 @@ animals: ["Brittle stars","Centipede"]
 n_legs: [5,100]
 """
 
-from .base import ColumnRef, col
+from .base import ColumnRef, col, lit
 from .datasources import CSVDataSource, PyArrowTableDataSource
 from .expressions import FunctionCallExpression
 from .filtering import FilterNode
@@ -59,6 +59,7 @@ __all__ = (
     "FilterNode",
     "FunctionCallExpression",
     "col",
+    "lit",
     "ColumnRef",
     "PaginateNode",
 )

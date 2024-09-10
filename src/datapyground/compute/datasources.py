@@ -41,21 +41,25 @@ class CSVDataSource(QueryPlanNode):
 
 
 class PyArrowTableDataSource(QueryPlanNode):
-    """Load data from an in-memory pyarrow.Table.
+    """Load data from an in-memory pyarrow.Table or pyarrow.RecordBatch.
 
-    Given a :class:`pyarrow.Table` object, allow
-    to use its data in a query plan.
+    Given a :class:`pyarrow.Table` or `pyarrow.RecordBatch` object,
+    allow to use its data in a query plan.
     """
 
-    def __init__(self, table: pa.Table) -> None:
+    def __init__(self, table: pa.Table | pa.RecordBatch) -> None:
         """
-        :param table: The table with the data to read.
+        :param table: The table or recordbatch with the data to read.
         """
         self.table = table
+        self.is_recordbatch = isinstance(table, pa.RecordBatch)
 
     def __str__(self) -> str:
         return f"PyArrowTableDataSource(columns={self.table.columns}, rows={self.table.num_rows})"
 
     def batches(self) -> Iterator[pa.RecordBatch]:
         """Emit the data contained in the Table for consumption by other node."""
-        yield from self.table.to_batches()
+        if self.is_recordbatch:
+            yield self.table
+        else:
+            yield from self.table.to_batches()
