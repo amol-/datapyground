@@ -55,7 +55,8 @@ class PaginateNode(QueryPlanNode):
         """
         consumed_rows = 0  # keep track of how many rows we have already seen
 
-        for batch in self.child.batches():
+        batches_generator = self.child.batches()
+        for batch in batches_generator:
             batch_size = batch.num_rows
 
             # Keep discarding batches until we get to the batch that
@@ -81,4 +82,5 @@ class PaginateNode(QueryPlanNode):
                 yield batch.slice(start_in_batch, rows_in_this_batch)
             consumed_rows += batch_size
             if consumed_rows >= self.offset + self.length:
+                batches_generator.close()
                 break
