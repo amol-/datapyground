@@ -107,7 +107,10 @@ class SortNode(QueryPlanNode):
             table = pa.concat_tables(mmaped_batches, promote_options="none")
             table = table.sort_by(self.sorting)
             for batch in table.to_batches():
-                yield batch
+                try:
+                    yield batch
+                except GeneratorExit:
+                    break
         finally:
             for mmaped_file in mmaped_files:
                 mmaped_file.close()
