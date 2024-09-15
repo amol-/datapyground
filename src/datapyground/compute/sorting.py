@@ -258,9 +258,9 @@ class ExternalSortNode(QueryPlanNode):
         # on that file descriptor.
         # This reference shall be removed when there are no more mappings to the file.
         with pa.memory_map(batch_file_name, "r") as mmapped_file:
-            reader = pa.ipc.open_file(mmapped_file)
-            assert reader.num_record_batches == 1
-            data = reader.get_batch(0)
+            with pa.ipc.open_file(mmapped_file) as reader:
+                assert reader.num_record_batches == 1
+                data = reader.get_batch(0)
         return batch_file_name, data
 
 
