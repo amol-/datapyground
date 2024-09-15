@@ -298,7 +298,7 @@ class ExternalSortKey:
     def __lt__(self, other: Self) -> bool:
         for v1, v2, desc in zip(self.values, other.values, self.descending_orders):
             equal = pc.equal(v1, v2)
-            if equal.is_valid and equal.as_py():
+            if equal.is_valid and self.SCALAR_TRUE.equals(equal):
                 continue
             else:
                 if desc:
