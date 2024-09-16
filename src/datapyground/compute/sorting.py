@@ -200,22 +200,20 @@ class ExternalSortNode(QueryPlanNode):
             # back a new row from the same batch, if there are any.
             # This way the heap will always have one row from each batch.
             batch_schema = mmaped_batches[0].schema
-            current_batch = [[] for _ in range(len(batch_schema))]
+            current_batch = []
             while heap:
                 _, batch_idx, row_idx, row = heapq.heappop(heap)
-                for idx, column in enumerate(row.columns):
-                    current_batch[idx].append(column[0])
+                current_batch.append(row)
 
                 # If we accumulated enough rows that it makes
                 # sense to yield a batch, we do so.
-                if len(current_batch[0]) >= self.batch_size:
-                    chunk = pa.record_batch(current_batch, schema=batch_schema)
+                if len(current_batch) >= self.batch_size:
+                    chunk = self._make_batch_from_rows(batch_schema, current_batch)
                     try:
                         yield chunk
                     except GeneratorExit:
                         return
-                    for column in current_batch:
-                        column.clear()
+                    current_batch.clear()
 
                 mmaped_batch = mmaped_batches[batch_idx]
                 next_row_id = row_idx + 1
@@ -229,8 +227,8 @@ class ExternalSortNode(QueryPlanNode):
                 heapq.heappush(heap, (sort_key, batch_idx, next_row_id, next_row))
 
             # Yield one last batch with the remaining rows.
-            if len(current_batch[0]):
-                chunk = pa.record_batch(current_batch, schema=batch_schema)
+            if len(current_batch):
+                chunk = self._make_batch_from_rows(batch_schema, current_batch)
                 try:
                     yield chunk
                 except GeneratorExit:
@@ -240,9 +238,41 @@ class ExternalSortNode(QueryPlanNode):
             for temp_file in temporay_files:
                 os.unlink(temp_file)
 
+    def _make_batch_from_rows(
+        self, schema: pa.Schema, rows: list[pa.RecordBatch]
+    ) -> pa.RecordBatch:
+        """Concatenates multiple batches in a single one.
+
+        As of PyArrow 17.0.0, there is no easy way to
+        concatenate multiple batches.
+
+        This functions creates a Table out of them
+        via RecordBatchReader and then combines the rows
+        of the table. The result should contain a single
+        batch when the Table is converted back to a RecordBatch
+        because all rows were combinated.
+        """
+        return (
+            pa.RecordBatchReader.from_batches(schema, rows)
+            .read_all()
+            .combine_chunks()
+            .to_batches()[0]
+        )
+
     def _memory_map_batch(
         self, record_batch: pa.RecordBatch
     ) -> tuple[str, pa.RecordBatch]:
+        """Creates a temporary memory mapped file from a RecordBatch.
+
+        This allows to reduce memory pressure by writing
+        the content to disk and them memory mapping it back.
+
+        As far as the data is written into Arrow native format
+        and it has no compression, memory mapping it should
+        involve a zero-copy and the kernel will be able
+        to swap-in and swap-out data from memory as it requires
+        free memory, thus avoiding OOMs.
+        """
         with NamedTemporaryFile(
             prefix=self._TEMPORARY_FILE_PREFIX, delete=False
         ) as batch_file:
@@ -298,18 +328,18 @@ class ExternalSortKey:
     def __lt__(self, other: Self) -> bool:
         for v1, v2, desc in zip(self.values, other.values, self.descending_orders):
             equal = pc.equal(v1, v2)
-            if equal.is_valid and self.SCALAR_TRUE.equals(equal):
+            if equal.as_py() is True:
                 continue
             else:
                 if desc:
                     greater = pc.greater(v1, v2)
-                    return greater.is_valid and self.SCALAR_TRUE.equals(greater)
+                    return greater.as_py() is True
                 else:
                     less = pc.less(v1, v2)
-                    return less.is_valid and self.SCALAR_TRUE.equals(less)
+                    return less.as_py() is True
         return False  # All keys are equal
 
     def __eq__(self, other: Self) -> bool:
         for v1, v2 in zip(self.values, other.values):
             equal = pc.equal(v1, v2)
-            return equal.is_valid and self.SCALAR_TRUE.equals(equal)
+            return equal.as_py() is True
