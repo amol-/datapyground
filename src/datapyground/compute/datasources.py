@@ -24,18 +24,23 @@ class CSVDataSource(QueryPlanNode):
     for the next nodes of the query plan to consume.
     """
 
-    def __init__(self, filename: str) -> None:
+    def __init__(self, filename: str, block_size: int | None = None) -> None:
         """
         :param filename: The path of the local CSV file.
+        :param block_size: How big to make batches of data,
+                           Influences how many batches will be produced
         """
         self.filename = filename
+        self.block_size = block_size
 
     def __str__(self) -> str:
-        return f"CSVDataSource({self.filename})"
+        return f"CSVDataSource({self.filename}, block_size={self.block_size})"
 
     def batches(self) -> Iterator[pa.RecordBatch]:
         """Open CSV file and emit the batches."""
-        with pa.csv.open_csv(self.filename) as reader:
+        with pa.csv.open_csv(
+            self.filename, read_options=pa.csv.ReadOptions(block_size=self.block_size)
+        ) as reader:
             for batch in reader:
                 yield batch
 

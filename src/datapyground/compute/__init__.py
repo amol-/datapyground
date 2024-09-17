@@ -52,6 +52,7 @@ from .datasources import CSVDataSource, PyArrowTableDataSource
 from .expressions import FunctionCallExpression
 from .filtering import FilterNode
 from .pagination import PaginateNode
+from .sorting import ExternalSortNode, SortNode
 
 __all__ = (
     "CSVDataSource",
@@ -62,4 +63,6 @@ __all__ = (
     "lit",
     "ColumnRef",
     "PaginateNode",
+    "SortNode",
+    "ExternalSortNode",
 )

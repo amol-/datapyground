@@ -17,7 +17,6 @@ from tempfile import NamedTemporaryFile
 from typing import Iterator, Self
 
 import pyarrow as pa
-import pyarrow.compute as pc
 
 from .base import QueryPlanNode
 
@@ -104,11 +103,24 @@ class ExternalSortNode(QueryPlanNode):
     out of memory, but it can work with datasets that are
     larger than the available memory.
 
+    The performance is currently suboptimal because the merge
+    of the sorted batches has to happen in Python, and thus
+    all values have to be converted to python objects, but the
+    memory consumption is greatly reduced compared to SortNode
+
+    Those were the performance on the development machine:
+
+    * **InMemory** -> TIME: 2.0s MEMORY: 772MB
+    * **External** -> TIME: 69.6s MEMORY: 92MB
+
+    Which confirms the expected memory improvements provided by
+    the external sorting implementation.
+
     >>> import pyarrow as pa
     >>> from datapyground.compute import col, lit, FunctionCallExpression, PyArrowTableDataSource
     >>> data = pa.record_batch({"values": [1, 2, 3, 4, 5]})
     >>> # Sort the data in descending order
-    >>> sort = SortNode(["values"], [True], PyArrowTableDataSource(data))
+    >>> sort = ExternalSortNode(["values"], [True], PyArrowTableDataSource(data))
     >>> next(sort.batches())
     pyarrow.RecordBatch
     values: int64
@@ -183,14 +195,16 @@ class ExternalSortNode(QueryPlanNode):
             # we will use an heap, it will take care of the order of
             # the rows of each batch for us.
             heap = []
+            sorting_keys_indices = ExternalSortKey.get_column_indices(
+                mmaped_batches[0].schema, self.sorting_keys
+            )
 
             # Fill the heap with the first row of each batch.
             for idx, mmaped_batch in enumerate(mmaped_batches):
                 first_row = mmaped_batch.slice(0, 1)
-                key_values = ExternalSortKey.get_sort_key_values(
-                    first_row, self.sorting_keys
+                sort_key = ExternalSortKey(
+                    first_row, sorting_keys_indices, self.descending_orders
                 )
-                sort_key = ExternalSortKey(key_values, self.descending_orders)
                 heapq.heappush(heap, (sort_key, idx, 0, first_row))
 
             # Now that we have an heap ready, we pull one row at a time
@@ -220,10 +234,9 @@ class ExternalSortNode(QueryPlanNode):
                 if next_row_id >= len(mmaped_batch):
                     continue
                 next_row = mmaped_batch.slice(next_row_id, 1)
-                key_values = ExternalSortKey.get_sort_key_values(
-                    next_row, self.sorting_keys
+                sort_key = ExternalSortKey(
+                    next_row, sorting_keys_indices, self.descending_orders
                 )
-                sort_key = ExternalSortKey(key_values, self.descending_orders)
                 heapq.heappush(heap, (sort_key, batch_idx, next_row_id, next_row))
 
             # Yield one last batch with the remaining rows.
@@ -302,44 +315,38 @@ class ExternalSortKey:
     columns in the order they are provided.
     """
 
-    SCALAR_TRUE = pa.scalar(True)
+    @classmethod
+    def get_column_indices(
+        cls, schema: pa.Schema, column_names: list[str]
+    ) -> list[int]:
+        """Given a list of columns return their indices in the Schema.
 
-    def __init__(self, values: list[pa.Scalar], descending_orders: list[bool]) -> None:
+        :param schema: The schema containing the columns.
+        :param column_names: The list of column names for which to return the indices.
         """
-        :param values: The values to compare.
+        return [schema.get_field_index(colname) for colname in column_names]
+
+    def __init__(
+        self,
+        row: pa.RecordBatch,
+        keys_indices: list[int],
+        descending_orders: list[bool],
+    ) -> None:
+        """
+        :param row: The recordbatch row to compare.
+        :param key_indices: The indices of the column to use for comparison
         :param descending_orders: Which of the values are compared for descending order
         """
-        self.values = values
         self.descending_orders = descending_orders
-
-    @classmethod
-    def get_sort_key_values(
-        cls, record_batch: pa.RecordBatch, sorting_keys: list[str]
-    ) -> list[pa.Scalar]:
-        """Extract sort key values from a RecordBatch containing a single row."""
-        values = []
-        for key in sorting_keys:
-            index = record_batch.schema.get_field_index(key)
-            column = record_batch.column(index)
-            value = column[0]
-            values.append(value)
-        return values
+        self.values = [row.column(colidx)[0].as_py() for colidx in keys_indices]
 
     def __lt__(self, other: Self) -> bool:
         for v1, v2, desc in zip(self.values, other.values, self.descending_orders):
-            equal = pc.equal(v1, v2)
-            if equal.as_py() is True:
+            if v1 == v2:
                 continue
             else:
                 if desc:
-                    greater = pc.greater(v1, v2)
-                    return greater.as_py() is True
+                    return v1 > v2
                 else:
-                    less = pc.less(v1, v2)
-                    return less.as_py() is True
+                    return v1 < v2
         return False  # All keys are equal
-
-    def __eq__(self, other: Self) -> bool:
-        for v1, v2 in zip(self.values, other.values):
-            equal = pc.equal(v1, v2)
-            return equal.as_py() is True
