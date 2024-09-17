@@ -16,10 +16,10 @@ from .expressions import Expression
 
 
 class ProjectNode(QueryPlanNode):
-    """Project data by selecting specific columns and applying expressions.
+    """Project data by selecting specific columns and computing expressions.
 
-    The projection expects a list of column names to select and a list of
-    expressions to project new columns.
+    The projection expects a list of column names to select and a dictionary
+    of column names and expressions to project new columns.
 
     >>> import pyarrow as pa
     >>> import pyarrow.compute as pc
@@ -36,17 +36,29 @@ class ProjectNode(QueryPlanNode):
     """
 
     def __init__(
-        self, select: list[str], project: dict[str, Expression], child: QueryPlanNode
+        self,
+        select: list[str] | None,
+        project: dict[str, Expression] | None,
+        child: QueryPlanNode,
     ) -> None:
         """
         :param columns: The list of column names to select.
-        :param expressions: The list of expressions to project new columns.
+                        ``None`` means select all columns.
+                        ``[]`` means select only the projected columns.
+        :param expressions: The dict {name: Expression} to project new columns.
         :param child: The node emitting the data to be projected.
         """
         self.select = select
-        self.project = project
-        self.requested_columns = self.select + list(self.project.keys())
+        self.project = project or {}
         self.child = child
+
+        if self.select is None:
+            # No selection was provided, we will select all columns
+            self.restrict_columns = None
+        else:
+            # This is the list of columns we want to keep,
+            # in case select=[] it will only provide the project columns.
+            self.restrict_columns = self.select + list(self.project.keys())
 
     def __str__(self) -> str:
         return f"ProjectNode(select={self.select}, project={self.project}, child={self.child})"
@@ -55,11 +67,16 @@ class ProjectNode(QueryPlanNode):
         """Apply the projection to the child node.
 
         For each recordbatch yielded by the child node,
-        select the specified columns and apply the expressions
-        to project new columns.
+        sequentially apply the expressions to project new columns
+        and then select the requested columns.
+
+        We need to do this
         """
         for batch in self.child.batches():
             for name, expr in self.project.items():
                 batch = batch.append_column(name, expr.apply(batch))
-            batch = batch.select(self.requested_columns)
+
+            if self.restrict_columns is not None:
+                batch = batch.select(self.restrict_columns)
+
             yield batch

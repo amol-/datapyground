@@ -126,3 +126,30 @@ def test_project_with_all_columns(mock_data):
     assert batch.column(1).to_pylist() == [4, 5, 6]
     assert batch.column(2).to_pylist() == [7, 8, 9]
     assert batch.column(3).to_pylist() == [5, 7, 9]
+
+
+def test_select_none(mock_data):
+    """Test selecting all columns when select is None."""
+    expressions = {"sum_ab": FunctionCallExpression(pc.add, col("a"), col("b"))}
+    project_node = ProjectNode(None, expressions, PyArrowTableDataSource(mock_data))
+    batches = list(project_node.batches())
+    assert len(batches) == 1
+    batch = batches[0]
+    assert batch.num_columns == 4
+    assert batch.column_names == ["a", "b", "c", "sum_ab"]
+    assert batch.column(0).to_pylist() == [1, 2, 3]
+    assert batch.column(1).to_pylist() == [4, 5, 6]
+    assert batch.column(2).to_pylist() == [7, 8, 9]
+    assert batch.column(3).to_pylist() == [5, 7, 9]
+
+
+def test_select_empty_project_one_column(mock_data):
+    """Test selecting no columns but projecting one new column."""
+    expressions = {"sum_ab": FunctionCallExpression(pc.add, col("a"), col("b"))}
+    project_node = ProjectNode([], expressions, PyArrowTableDataSource(mock_data))
+    batches = list(project_node.batches())
+    assert len(batches) == 1
+    batch = batches[0]
+    assert batch.num_columns == 1
+    assert batch.column_names == ["sum_ab"]
+    assert batch.column(0).to_pylist() == [5, 7, 9]
