@@ -35,6 +35,11 @@ def teardown_module():
             (MOCK_PYARROW_TABLE,),
             "PyArrowTableDataSource(columns=['col1', 'col2', 'col3'], rows=3)",
         ),
+        (
+            PyArrowTableDataSource,
+            (MOCK_PYARROW_TABLE.to_batches()[0],),
+            "PyArrowTableDataSource(columns=['col1', 'col2', 'col3'], rows=3)",
+        ),
     ],
 )
 def test_init_and_str(data_source_class, init_args, expected_str):
@@ -49,6 +54,11 @@ def test_init_and_str(data_source_class, init_args, expected_str):
         (
             PyArrowTableDataSource,
             (MOCK_PYARROW_TABLE,),
+            MOCK_PYARROW_TABLE.to_batches(),
+        ),
+        (
+            PyArrowTableDataSource,
+            (MOCK_PYARROW_TABLE.to_batches()[0],),
             MOCK_PYARROW_TABLE.to_batches(),
         ),
     ],
