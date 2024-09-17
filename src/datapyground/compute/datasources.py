@@ -60,7 +60,7 @@ class PyArrowTableDataSource(QueryPlanNode):
         self.is_recordbatch = isinstance(table, pa.RecordBatch)
 
     def __str__(self) -> str:
-        return f"PyArrowTableDataSource(columns={self.table.columns}, rows={self.table.num_rows})"
+        return f"PyArrowTableDataSource(columns={self.table.column_names}, rows={self.table.num_rows})"
 
     def batches(self) -> Iterator[pa.RecordBatch]:
         """Emit the data contained in the Table for consumption by other node."""
