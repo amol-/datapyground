@@ -15,6 +15,8 @@ More node types might need different type of expressions.
 This module implements the most common ones.
 """
 
+import typing
+
 import pyarrow as pa
 
 from .. import utils
@@ -57,7 +59,7 @@ class FunctionCallExpression(Expression):
 
     """
 
-    def __init__(self, func: callable, *args: Expression) -> None:
+    def __init__(self, func: typing.Callable, *args: Expression) -> None:
         """
         :param func: The function accepting the arguments.
         :param \\*args: The arguments for the function.
