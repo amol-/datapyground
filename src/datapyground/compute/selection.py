@@ -7,10 +7,6 @@ An example is the ``SELECT`` clause in SQL queries.
 This module implements the basic projection capabilities.
 """
 
-from typing import Iterator
-
-import pyarrow as pa
-
 from .base import QueryPlanNode
 from .expressions import Expression
 
@@ -63,7 +59,7 @@ class ProjectNode(QueryPlanNode):
     def __str__(self) -> str:
         return f"ProjectNode(select={self.select}, project={self.project}, child={self.child})"
 
-    def batches(self) -> Iterator[pa.RecordBatch]:
+    def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Apply the projection to the child node.
 
         For each recordbatch yielded by the child node,

@@ -8,8 +8,6 @@ They are used to do things like loading
 data from CSV files or equivalent operations
 """
 
-from typing import Iterator
-
 import pyarrow as pa
 import pyarrow.csv
 
@@ -36,7 +34,7 @@ class CSVDataSource(QueryPlanNode):
     def __str__(self) -> str:
         return f"CSVDataSource({self.filename}, block_size={self.block_size})"
 
-    def batches(self) -> Iterator[pa.RecordBatch]:
+    def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Open CSV file and emit the batches."""
         with pa.csv.open_csv(
             self.filename, read_options=pa.csv.ReadOptions(block_size=self.block_size)
@@ -62,7 +60,7 @@ class PyArrowTableDataSource(QueryPlanNode):
     def __str__(self) -> str:
         return f"PyArrowTableDataSource(columns={self.table.column_names}, rows={self.table.num_rows})"
 
-    def batches(self) -> Iterator[pa.RecordBatch]:
+    def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Emit the data contained in the Table for consumption by other node."""
         if self.is_recordbatch:
             yield self.table

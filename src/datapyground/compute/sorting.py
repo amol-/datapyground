@@ -14,7 +14,7 @@ This module implements the sorting capabilities.
 import heapq
 import os
 from tempfile import NamedTemporaryFile
-from typing import Iterator, Self
+from typing import Self
 
 import pyarrow as pa
 
@@ -62,7 +62,7 @@ class SortNode(QueryPlanNode):
     def __str__(self) -> str:
         return f"SortNode(sorting={self.sorting}, {self.child})"
 
-    def batches(self) -> Iterator[pa.RecordBatch]:
+    def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """The sorting to the child node.
 
         Batches provided by child node are accumulated
@@ -156,7 +156,7 @@ class ExternalSortNode(QueryPlanNode):
     def __str__(self) -> str:
         return f"SortNode(sorting={self.sorting}, {self.child})"
 
-    def batches(self) -> Iterator[pa.RecordBatch]:
+    def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """The sorting to the child node.
 
         Each batch yielded by the child node will be
@@ -194,7 +194,7 @@ class ExternalSortNode(QueryPlanNode):
             # For sorting without having to load all data in memory
             # we will use an heap, it will take care of the order of
             # the rows of each batch for us.
-            heap = []
+            heap: list[tuple[ExternalSortKey, int, int, pa.RecordBatch]] = []
             sorting_keys_indices = ExternalSortKey.get_column_indices(
                 mmaped_batches[0].schema, self.sorting_keys
             )

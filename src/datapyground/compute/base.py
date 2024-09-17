@@ -5,7 +5,7 @@ necessary to represent a query plan and execute it.
 """
 
 import abc
-from typing import Iterator
+from typing import Generator
 
 import pyarrow as pa
 
@@ -57,8 +57,10 @@ class QueryPlanNode(abc.ABC):
                 return f"DebugDataNode()"
     """
 
+    RecordBatchesGenerator = Generator[pa.RecordBatch, None, None]
+
     @abc.abstractmethod
-    def batches(self) -> Iterator[pa.RecordBatch]:
+    def batches(self) -> RecordBatchesGenerator:
         """Emits the batches for the next node.
 
         Each QueryPlan node is expected to be able to

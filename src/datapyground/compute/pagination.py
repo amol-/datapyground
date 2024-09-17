@@ -5,10 +5,6 @@ emitted by a query plan. Discarding the rows that
 are not part of the selected slice of data.
 """
 
-from typing import Iterator
-
-import pyarrow as pa
-
 from .base import QueryPlanNode
 
 
@@ -40,7 +36,7 @@ class PaginateNode(QueryPlanNode):
     def __str__(self) -> str:
         return f"PaginateNode({self.offset}:{self.end}, {self.child})"
 
-    def batches(self) -> Iterator[pa.RecordBatch]:
+    def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Apply the pagination to the child node and emit the rows.
 
         Consume rows from the child node skipping those until we

@@ -16,3 +16,8 @@ repos:
         # rather than just the changed files.
         pass_filenames: false
         always_run: true
+      - id: typing
+        name: MyPy type checker
+        entry: .venv/bin/mypy
+        language: system
+        types: [python]

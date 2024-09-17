@@ -7,10 +7,6 @@ An example is the ``WHERE`` condition in SQL queries.
 This module implements the basic filtering capabilities.
 """
 
-from typing import Iterator
-
-import pyarrow as pa
-
 from .base import QueryPlanNode
 from .expressions import Expression
 
@@ -56,7 +52,7 @@ class FilterNode(QueryPlanNode):
     def __str__(self) -> str:
         return f"FilterNode({self.expression}, {self.child})"
 
-    def batches(self) -> Iterator[pa.RecordBatch]:
+    def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Apply the filtering to the child node.
 
         For each recordbatch yielded by the child node,
