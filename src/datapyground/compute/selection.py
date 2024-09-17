@@ -69,7 +69,9 @@ class ProjectNode(QueryPlanNode):
         sequentially apply the expressions to project new columns
         and then select the requested columns.
 
-        We need to do this
+        We need to do this to allow projected columns to
+        depend on previously projected columns or from
+        columns that are not in the selection.
         """
         for batch in self.child.batches():
             for name, expr in self.project.items():
