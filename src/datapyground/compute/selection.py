@@ -4,7 +4,10 @@ A common request in queries is to select specific columns
 and project new columns based on expressions.
 An example is the ``SELECT`` clause in SQL queries.
 
-This module implements the basic projection capabilities.
+This module implements the basic projection capabilities::
+
+    SELECT a, b, a + b AS ab_sum
+
 """
 
 from .base import QueryPlanNode
@@ -38,10 +41,10 @@ class ProjectNode(QueryPlanNode):
         child: QueryPlanNode,
     ) -> None:
         """
-        :param columns: The list of column names to select.
-                        ``None`` means select all columns.
-                        ``[]`` means select only the projected columns.
-        :param expressions: The dict {name: Expression} to project new columns.
+        :param select: The list of column names to select.
+                       ``None`` means select all columns.
+                       `[]`` means select only the projected columns.
+        :param project: The dict {name: Expression} to project new columns.
         :param child: The node emitting the data to be projected.
         """
         self.select = select
