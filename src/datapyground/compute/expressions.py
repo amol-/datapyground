@@ -69,6 +69,8 @@ class FunctionCallExpression(Expression):
         func_qualname = utils.inspect.get_qualname(self.func)
         return f"{func_qualname}({','.join(map(str, self.args))})"
 
+    __repr__ = __str__
+
     def apply(self, batch: pa.RecordBatch) -> pa.Array:
         """Invoke the function resolving all argumnets on the recordbatch.
 
