@@ -34,6 +34,18 @@ def test_basic_aggregation():
     assert result.column(1).to_pylist() == [45, 20]
 
 
+def test_aggregate_node_str():
+    aggregate = AggregateNode(
+        ["city"],
+        {"total_employees": SumAggregation("n_employees")},
+        PyArrowTableDataSource(TEST_DATA),
+    )
+    assert str(aggregate) == (
+        "AggregateNode(keys=['city'], aggregations={'total_employees': SumAggregation(n_employees)}, "
+        "PyArrowTableDataSource(columns=['city', 'shop', 'n_employees'], rows=5))"
+    )
+
+
 def test_min_aggregation():
     aggregate = AggregateNode(
         ["city"],

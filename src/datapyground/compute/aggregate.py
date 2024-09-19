@@ -31,16 +31,20 @@ class AggregateNode(QueryPlanNode):
 
     >>> import pyarrow as pa
     >>> import pyarrow.compute as pc
-    >>> from datapyground.compute import col, lit, FunctionCallExpression, PyArrowTableDataSource
+    >>> from datapyground.compute import col, lit, SumAggregation, PyArrowTableDataSource
     >>> data = pa.record_batch({
     ...    'city': pa.array(['New York', 'New York', 'Los Angeles', 'Los Angeles', 'New York']),
     ...    'shop': pa.array(['Shop A', 'Shop B', 'Shop C', 'Shop D', 'Shop E']),
     ...    'n_employees': pa.array([10, 15, 8, 12, 20])
     ... })
-    >>> aggregate = AggregateNode(["city"], {"total_employees": FunctionCallExpression(pc.sum, col("n_employees"))}, PyArrowTableDataSource(data))
+    >>> aggregate = AggregateNode(["city"], {"total_employees": SumAggregation("n_employees")}, PyArrowTableDataSource(data))
     >>> next(aggregate.batches())
-    asdf
-
+    pyarrow.RecordBatch
+    city: string
+    total_employees: int64
+    ----
+    city: ["New York","Los Angeles"]
+    total_employees: [45,20]
     """
 
     def __init__(
@@ -144,6 +148,11 @@ class Aggregation(abc.ABC):
 
     def __init__(self, column: str) -> None:
         self.column = column
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.column})"
+
+    __repr__ = __str__
 
     @abc.abstractmethod
     def compute_chunk(self, batch: pa.RecordBatch) -> Any: ...
