@@ -47,6 +47,14 @@ animals: ["Brittle stars","Centipede"]
 n_legs: [5,100]
 """
 
+from .aggregate import (
+    AggregateNode,
+    CountAggregation,
+    MaxAggregation,
+    MeanAggregation,
+    MinAggregation,
+    SumAggregation,
+)
 from .base import ColumnRef, col, lit
 from .datasources import CSVDataSource, PyArrowTableDataSource
 from .expressions import FunctionCallExpression
@@ -67,4 +75,10 @@ __all__ = (
     "SortNode",
     "ExternalSortNode",
     "ProjectNode",
+    "AggregateNode",
+    "CountAggregation",
+    "MaxAggregation",
+    "MeanAggregation",
+    "MinAggregation",
+    "SumAggregation",
 )
