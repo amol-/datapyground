@@ -21,3 +21,4 @@ repos:
         entry: .venv/bin/mypy
         language: system
         types: [python]
+        exclude: ^examples/
