@@ -95,11 +95,11 @@ class AggregateNode(QueryPlanNode):
         and return only those matching the filter.
         """
         if len(self.keys) == 1:
-            yield from self._single_key_aggregation()
+            yield from self.single_key_aggregation()
         else:
-            yield from self._multi_key_aggregation()
+            yield from self.multi_key_aggregation()
 
-    def _single_key_aggregation(self) -> QueryPlanNode.RecordBatchesGenerator:
+    def single_key_aggregation(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Compute the aggregation for a single key.
 
         This is an optimized path where we can rely on dictionary encoding
@@ -136,9 +136,9 @@ class AggregateNode(QueryPlanNode):
         # For example it could look like {"New York": {"total_employees": [10, 20, 30]}}
         # Now we need to reduce the partial aggregation results to get the final aggregation results
         # Which woud lead to {"New York": {"total_employees": 60}}
-        yield self._reduce_aggregations(chunks_data)
+        yield self.reduce_aggregations(chunks_data)
 
-    def _multi_key_aggregation(self) -> QueryPlanNode.RecordBatchesGenerator:
+    def multi_key_aggregation(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Compute the aggregation for multiple keys.
 
         In this case we will have to manually implement the grouping
@@ -193,9 +193,9 @@ class AggregateNode(QueryPlanNode):
                         aggregation.compute_chunk(chunk)
                     )
 
-        yield self._reduce_aggregations(chunks_data)
+        yield self.reduce_aggregations(chunks_data)
 
-    def _reduce_aggregations(
+    def reduce_aggregations(
         self, chunks_data: dict[Any, dict[str, list[pa.Scalar]]]
     ) -> pa.RecordBatch:
         """Reduce the partial aggregation results to the final aggregation results.
