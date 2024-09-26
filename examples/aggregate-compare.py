@@ -20,8 +20,8 @@ if aggregation_type == "single":
         child=CSVDataSource("data/geounits.csv", block_size=1024 * 1024),
     )
 elif aggregation_type == "multi":
-    # On aggregation_type machine did lead to
-    #   TIME: ?? MEMORY: ??
+    # On development machine did lead to
+    #   TIME: 46.7 MEMORY: 169
     q = AggregateNode(
         ["year", "Area"],
         {"total_geo_count": SumAggregation("geo_count")},

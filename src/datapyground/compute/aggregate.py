@@ -80,19 +80,22 @@ class AggregateNode(QueryPlanNode):
         else:
             yield from self._multi_key_aggregation()
 
-    def _single_key_aggregation(self) -> pa.RecordBatch:
-        aggr_key = self.keys[0]
+    def _single_key_aggregation(self) -> QueryPlanNode.RecordBatchesGenerator:
+        """Compute the aggregation for a single key.
 
+        This is an optimized path where we can rely on dictionary encoding
+        to find the unique values of the key column and then filter the rows.
+        """
         # Compute separate aggregation results for each batch.
         # This makes so that we need to keep in memory only one batch
         # at the time, and the aggregation results, which are far smaller
         #   chunks_data = {key_value: {aggr_name: [aggr_value1, aggr_value2, ...]}}
-        chunks_data: dict[str, dict[str, list[pa.Scalar]]] = {}
+        chunks_data: dict[pa.Scalar, dict[str, list[pa.Scalar]]] = {}
         for batch in self.child.batches():
             # Dictinary Encode the key variable,
             # so we can get the unique values
             # and we can know at which rows each value is.
-            key_column = batch.column(aggr_key)
+            key_column = batch.column(self.keys[0])
             key_column = pc.dictionary_encode(key_column)
             key_values = key_column.dictionary
             key_indices = key_column.indices
@@ -114,12 +117,99 @@ class AggregateNode(QueryPlanNode):
         # For example it could look like {"New York": {"total_employees": [10, 20, 30]}}
         # Now we need to reduce the partial aggregation results to get the final aggregation results
         # Which woud lead to {"New York": {"total_employees": 60}}
+        yield self._reduce_aggregations(chunks_data)
+
+    def _multi_key_aggregation(self) -> QueryPlanNode.RecordBatchesGenerator:
+        """Compute the aggregation for multiple keys.
+
+        In this case we will have to manually implement the grouping
+        as we can't rely on dictionary encoding to find the unique values
+        """
+        # The most simple way to implement multi-key aggregation would be
+        # to create a StructArray or ListArray out of the aggregation keys
+        # And then dictionary encode that array to find the unique values.
+        # But dictionary encoding is currently not supported for StructArray or ListArray
+        #
+        # Instead we will manually implement the aggregation in python,
+        # it's much slower, but it shows how aggregation can be implemented.
+        sorting_key = [(k, "ascending") for k in self.keys]
+        chunks_data: dict[tuple[pa.Scalar], dict[str, list[pa.Scalar]]] = {}
+        for batch in self.child.batches():
+            # First sort the data by the aggregation keys,
+            # this makes sure that we can compute the aggregation in a single pass.
+            # All the values for the same grouping key will be sequential
+            # For example:
+            #    Los Angeles, Shop A, 8
+            #    New York, Shop A, 10
+            #    New York, Shop B, 20
+            # so until the key changes we can compute the aggregation.
+            # another alterantive would be to use a hash table to keep track of the
+            # aggregation values for each key
+            sorted_batch = batch.sort_by(sorting_key)
+            current_key = None
+            chunk_start = 0
+            for row_index in range(sorted_batch.num_rows):
+                row_key = tuple(sorted_batch.column(k)[row_index] for k in self.keys)
+                if current_key is None:
+                    current_key = row_key
+                if row_key != current_key:
+                    # the key has changed, this means we finished a chunk of
+                    # rows with the same key, we can compute the aggregation for this chunk.
+                    chunk_length = row_index - chunk_start
+                    chunk = sorted_batch.slice(chunk_start, chunk_length)
+                    chunks_data.setdefault(current_key, {})
+                    for name, aggregation in self.aggregations.items():
+                        chunks_data[current_key].setdefault(name, []).append(
+                            aggregation.compute_chunk(chunk)
+                        )
+                    current_key = row_key
+                    chunk_start = row_index
+
+            # Compute the aggregation for the last chunk
+            if current_key is not None:
+                chunk = sorted_batch.slice(chunk_start, batch.num_rows - chunk_start)
+                chunks_data.setdefault(current_key, {})
+                for name, aggregation in self.aggregations.items():
+                    chunks_data[current_key].setdefault(name, []).append(
+                        aggregation.compute_chunk(chunk)
+                    )
+
+        yield self._reduce_aggregations(chunks_data)
+
+    def _reduce_aggregations(
+        self, chunks_data: dict[Any, dict[str, list[pa.Scalar]]]
+    ) -> pa.RecordBatch:
+        """Reduce the partial aggregation results to the final aggregation results.
+
+        Both single and multi key aggregation will end up computing the aggregations
+        for each chunk separately, this method will reduce the partial aggregation
+        results to the final aggregation results.
+
+        For example if we had 3 chunks and the chunks_data is:
+            {"New York": {"total_employees": [10, 20, 30]}}
+        The result will be:
+            {"New York": {"total_employees": 60}}
+        """
+        # Prepare one column for each key and aggregation
         result_batch_data: dict[str, list[pa.Scalar]] = {
-            aggr_key: [],
+            **{k: [] for k in self.keys},
             **{k: [] for k in self.aggregations.keys()},
         }
+        # For each key value, invoke the reduce method of the aggregation/
+        # In case of a single key
+        #   keyvalue is "New York"
+        #   aggregated_values is {"total_employees": [10, 20, 30]}
+        # In case of multiple keys
+        #   keyvalue is ("New York", "Shop A")
+        #   aggregated_values is {"total_employees": [10, 20, 30]}
         for keyvalue, aggregated_values in chunks_data.items():
-            result_batch_data[aggr_key].append(keyvalue)
+            if isinstance(keyvalue, tuple):
+                # multiple aggregation keys
+                for i, key in enumerate(self.keys):
+                    result_batch_data[key].append(keyvalue[i])
+            else:
+                # single aggregation key
+                result_batch_data[self.keys[0]].append(keyvalue)
             for aggrname, aggregation in self.aggregations.items():
                 result_batch_data[aggrname].append(
                     aggregation.reduce(aggregated_values[aggrname])
@@ -127,14 +217,7 @@ class AggregateNode(QueryPlanNode):
 
         # The result_batch_data is already formed in a way understood by pyarrow to create batches.
         # For example it could look like {"city": ["New York", "Los Angeles"], "total_employees": [60, 30]}
-        yield pa.record_batch(result_batch_data)
-
-    def _multi_key_aggregation(self) -> pa.RecordBatch:
-        # The most simple way to implement multi-key aggregation would be
-        # to create a StructArray or ListArray out of the aggregation keys
-        # And then dictionary encode that array to find the unique values.
-        # But dictionary encoding is currently not supported for StructArray or ListArray
-        raise NotImplementedError
+        return pa.record_batch(result_batch_data)
 
 
 class Aggregation(abc.ABC):
