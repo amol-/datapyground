@@ -204,9 +204,12 @@ class AggregateNode(QueryPlanNode):
         for each chunk separately, this method will reduce the partial aggregation
         results to the final aggregation results.
 
-        For example if we had 3 chunks and the chunks_data is:
+        For example if we had 3 chunks and the chunks_data is::
+
             {"New York": {"total_employees": [10, 20, 30]}}
-        The result will be:
+
+        The result will be::
+
             {"New York": {"total_employees": 60}}
         """
         # Prepare one column for each key and aggregation
