@@ -260,10 +260,22 @@ class Aggregation(abc.ABC):
     __repr__ = __str__
 
     @abc.abstractmethod
-    def compute_chunk(self, batch: pa.RecordBatch) -> Any: ...
+    def compute_chunk(self, batch: pa.RecordBatch) -> Any:
+        """Compute the aggregation partial results for a single chunk of data.
+
+        This method can return any intermediate result that will be
+        combined by the reduce method to get the final result.
+
+        Generally this will be a scalar, but in some cases
+        it might return more complex data structures.
+        See :class:`MeanAggregation` for an example.
+        """
+        ...
 
     @abc.abstractmethod
-    def reduce(self, chunks: list[pa.Array]) -> pa.Array: ...
+    def reduce(self, chunks: list[pa.Array]) -> pa.Array:
+        """Combine the partial aggregation results into the final result."""
+        ...
 
 
 class SimpleAggregation(Aggregation):
@@ -283,9 +295,11 @@ class SimpleAggregation(Aggregation):
     def _aggregate(self, data: Any) -> Any: ...
 
     def compute_chunk(self, batch: pa.RecordBatch) -> Any:
+        """Compute the aggregation partial results for a single chunk of data."""
         return self._aggregate(batch.column(self.column))
 
     def reduce(self, chunks: list[Any]) -> pa.Scalar:
+        """Reapply the same function to combine the partial results into the final result."""
         return self._aggregate(chunks)
 
 
