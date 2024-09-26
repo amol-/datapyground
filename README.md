@@ -19,6 +19,16 @@ The codebase is heavily documented and commented to make it easy to understand
 and modify, and contributions are welcomed and encouraged, it is meant
 to be a safe playground for learning and experimentation.
 
+## Documentation
+
+Each component of the data platform is self documented in a way inspired
+by the literate programming concept. The complete documentation
+is available at [Documentation](http://alessandro.molina.fyi/datapyground/)
+
+For further understanding of the codebase and the concepts
+reading the [**How Data Platforms Work**](https://github.com/amol-/datapyground/tree/main/book) 
+book is recommended.
+
 ## Getting Started
 
 Install datapyground package from pip:
@@ -29,16 +39,6 @@ pip install datapyground
 
 Once installed refer to the [Documentation](http://alessandro.molina.fyi/datapyground/) 
 of each component to learn how to use it.
-
-## Documentation
-
-Each component of the data platform is self documented in a way inspired
-by the literate programming concept. The complete documentation
-is available at [Documentation](http://alessandro.molina.fyi/datapyground/)
-
-For further understanding of the codebase and the concepts
-reading the [**How Data Platforms Work**](https://github.com/amol-/datapyground/tree/main/book) 
-book is recommended.
 
 ## Contributing
 
