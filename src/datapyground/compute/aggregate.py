@@ -7,6 +7,25 @@ of the data stored in datasets.
 The aggregate node is in charge of computing
 those aggregations and projecting them as new
 columns in a query pipeline.
+
+Typically the aggregate node will group the data
+by a set of columns and then compute the aggregations
+
+For example, given the following data::
+
+    city, shop, n_employees
+    New York, Shop A, 10
+    New York, Shop B, 15
+    Los Angeles, Shop C, 8
+    Los Angeles, Shop D, 12
+    New York, Shop E, 20
+
+We could group by city and compute the sum of the employees
+to get::
+
+    city, total_employees
+    New York, 45
+    Los Angeles, 20
 """
 
 import abc
