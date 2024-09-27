@@ -19,6 +19,6 @@ For the user guide and code documentation of each component, refer to the
 component itself.
 """
 
-from . import compute
+from . import compute, sql
 
-__all__ = ("compute",)
+__all__ = ("compute", "sql")

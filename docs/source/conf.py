@@ -24,6 +24,7 @@ autosummary_generate = True
 autoclass_content = "both"
 templates_path = ["_templates"]
 exclude_patterns = []
+autodoc_member_order = "bysource"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

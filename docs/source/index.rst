@@ -15,4 +15,5 @@ DataPyground documentation
    :recursive:
 
    compute
+   sql
    utils
