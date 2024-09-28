@@ -36,7 +36,7 @@ def GENERATE_TOKEN_SPECIFICATION() -> list[tuple[str, str]]:
     because if a keyword is matched, it should not be matched as an identifier.
     """
     return [
-        ("KEYWORD", r"SELECT|INSERT|UPDATE|FROM|WHERE|GROUP|BY"),
+        ("KEYWORD", r"SELECT|INSERT|UPDATE|FROM|WHERE|GROUP BY|ORDER BY|LIMIT|OFFSET"),
         ("IDENTIFIER", r"[A-Za-z_][A-Za-z0-9_]*"),
         ("OPERATOR", r"<>|<=|>=|!=|==|=|<|>|\+|-|\*|/"),
         ("LITERAL", r"\'[^\']*\'|\"[^\"]*\"|\d+(\.\d+)?"),
@@ -145,8 +145,10 @@ class Tokenizer:
             "UPDATE": UpdateToken,
             "FROM": FromToken,
             "WHERE": WhereToken,
-            "GROUP": GroupToken,
-            "BY": ByToken,
+            "GROUP BY": GroupByToken,
+            "ORDER BY": OrderByToken,
+            "LIMIT": LimitToken,
+            "OFFSET": OffsetToken,
         }
 
     def tokenize(self) -> list[Token]:
@@ -255,14 +257,26 @@ class WhereToken(KeywordToken):
     pass
 
 
-class GroupToken(KeywordToken):
-    """Token representing the GROUP keyword."""
+class GroupByToken(KeywordToken):
+    """Token representing the GROUP BY keyword."""
 
     pass
 
 
-class ByToken(KeywordToken):
-    """Token representing the BY keyword."""
+class OrderByToken(KeywordToken):
+    """Token representing the ORDER BY keyword."""
+
+    pass
+
+
+class LimitToken(KeywordToken):
+    """Token representing the LIMIT keyword."""
+
+    pass
+
+
+class OffsetToken(KeywordToken):
+    """Token representing the OFFSET keyword."""
 
     pass
 
