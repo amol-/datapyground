@@ -1,6 +1,6 @@
 """Format tabular data into a text table for print.
 
-the `tabulate` function takes a `pyarrow.RecordBatch` and formats it into a text table.
+the :func:`tabulate` function takes a :class:`pyarrow.RecordBatch` and formats it into a text table.
 It will truncate long strings, format floats to 2 decimal places, and limit the number of rows to display.
 The function is used to display the result of a query in the DataPyground SQL engine.
 
