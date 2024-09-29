@@ -60,7 +60,7 @@ class SortNode(QueryPlanNode):
         self.child = child
 
     def __str__(self) -> str:
-        return f"SortNode(sorting={self.sorting}, {self.child})"
+        return f"SortNode(sorting={self.sorting}, child={self.child})"
 
     def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """The sorting to the child node.

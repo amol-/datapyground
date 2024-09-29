@@ -56,8 +56,14 @@ would be represented as an AST like::
         ]
     }
 
-The **Planner** is responsible for taking the AST and generating a query plan
-for the compute engine to execute the requested query. This is done by traversing
-the AST and generating an equivalent tree of
+The :class:`datapyground.sql.planner.SQLQueryPlanner`` is responsible for
+taking the AST and generating a query plan for the compute engine to execute
+the requested query.
+This is done by traversing the AST and generating an equivalent tree of
 :class:`datapyground.compute.base.QueryPlanNode` objects.
 """
+
+from .parser import Parser
+from .planner import SQLQueryPlanner
+
+__all__ = ("Parser", "SQLQueryPlanner")

@@ -34,7 +34,7 @@ class PaginateNode(QueryPlanNode):
         self.child = child
 
     def __str__(self) -> str:
-        return f"PaginateNode({self.offset}:{self.end}, {self.child})"
+        return f"PaginateNode(range={self.offset}:{self.end}, child={self.child})"
 
     def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Apply the pagination to the child node and emit the rows.

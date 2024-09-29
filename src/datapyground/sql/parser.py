@@ -113,7 +113,7 @@ class Parser:
 class SelectStatementParser:
     """A parser for SELECT statements that converts SQL queries into Abstract Syntax Trees (AST).
 
-    The :clas:`Parser` class delegates the parsing of SELECT statements to this class, which
+    The :class:`Parser` class delegates the parsing of SELECT statements to this class, which
     handles the parsing of SELECT statements only.
 
     The main parser has already tokenized the input , so this parser works directly with the tokens
@@ -227,7 +227,7 @@ class SelectStatementParser:
         """Parse the SELECT projections from the SQL query.
 
         Projections can be expressions too, like ``SUM(salary)``, or ``ROUND(SUM(salary), 2)``
-        or even ``A + B``, handles aliases like ``'SELECT SUM(salary) AS total_salary'``too.
+        or even ``A + B``, handles aliases like ``SELECT SUM(salary) AS total_salary`` too.
 
         Returns a list of projection something like::
 

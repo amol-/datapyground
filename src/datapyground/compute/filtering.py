@@ -50,7 +50,7 @@ class FilterNode(QueryPlanNode):
         self.child = child
 
     def __str__(self) -> str:
-        return f"FilterNode({self.expression}, {self.child})"
+        return f"FilterNode(filter={self.expression}, child={self.child})"
 
     def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Apply the filtering to the child node.
