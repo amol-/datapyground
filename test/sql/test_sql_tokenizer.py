@@ -1,7 +1,6 @@
 import pytest
 
 from datapyground.sql.tokenize import (
-    EOFToken,
     FromToken,
     GroupByToken,
     IdentifierToken,
@@ -13,6 +12,7 @@ from datapyground.sql.tokenize import (
     OrderByToken,
     PunctuationToken,
     SelectToken,
+    SortingOrderToken,
     SQLTokenizeException,
     Tokenizer,
     UpdateToken,
@@ -34,7 +34,6 @@ def test_tokenizer_select_query():
         IdentifierToken("age"),
         OperatorToken(">="),
         LiteralToken("18"),
-        EOFToken(),
     ]
 
     assert tokens == expected_tokens
@@ -60,7 +59,6 @@ def test_tokenizer_insert_query():
         PunctuationToken(","),
         LiteralToken("'John'"),
         PunctuationToken(")"),
-        EOFToken(),
     ]
 
     assert tokens == expected_tokens
@@ -82,7 +80,6 @@ def test_tokenizer_update_query():
         IdentifierToken("id"),
         OperatorToken("="),
         LiteralToken("1"),
-        EOFToken(),
     ]
 
     assert tokens == expected_tokens
@@ -100,20 +97,14 @@ def test_tokenizer_empty_query():
     query = ""
     tokenizer = Tokenizer(query)
     tokens = tokenizer.tokenize()
-
-    expected_tokens = [EOFToken()]
-
-    assert tokens == expected_tokens
+    assert tokens == []
 
 
 def test_tokenizer_whitespace_query():
     query = "   "
     tokenizer = Tokenizer(query)
     tokens = tokenizer.tokenize()
-
-    expected_tokens = [EOFToken()]
-
-    assert tokens == expected_tokens
+    assert tokens == []
 
 
 def test_tokenizer_complex_query():
@@ -132,11 +123,10 @@ def test_tokenizer_complex_query():
         IdentifierToken("age"),
         OperatorToken(">="),
         LiteralToken("18"),
-        IdentifierToken("AND"),
+        OperatorToken("AND"),
         IdentifierToken("name"),
         OperatorToken("="),
         LiteralToken("'John'"),
-        EOFToken(),
     ]
 
     assert tokens == expected_tokens
@@ -154,7 +144,6 @@ def test_tokenizer_limit_query():
         IdentifierToken("table"),
         LimitToken("LIMIT"),
         LiteralToken("10"),
-        EOFToken(),
     ]
 
     assert tokens == expected_tokens
@@ -174,7 +163,6 @@ def test_tokenizer_offset_query():
         LiteralToken("10"),
         OffsetToken("OFFSET"),
         LiteralToken("5"),
-        EOFToken(),
     ]
 
     assert tokens == expected_tokens
@@ -192,8 +180,7 @@ def test_tokenizer_order_by_query():
         IdentifierToken("table"),
         OrderByToken("ORDER BY"),
         IdentifierToken("name"),
-        IdentifierToken("ASC"),
-        EOFToken(),
+        SortingOrderToken("ASC"),
     ]
 
     assert tokens == expected_tokens
@@ -216,7 +203,6 @@ def test_tokenizer_group_by_query():
         IdentifierToken("table"),
         GroupByToken("GROUP BY"),
         IdentifierToken("id"),
-        EOFToken(),
     ]
 
     assert tokens == expected_tokens
@@ -232,7 +218,6 @@ def test_token_str_repr():
         IdentifierToken("age"),
         OperatorToken(">="),
         LiteralToken("18"),
-        EOFToken(),
     ]
 
     for token in tokens:

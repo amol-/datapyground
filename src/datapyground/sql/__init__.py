@@ -36,17 +36,17 @@ would be represented as an AST like::
     {
         'type': 'select',
         'projections': [
-            {'type': 'column', 'value': 'id'},
-            {'type': 'column', 'value': 'name'}
+            {'type': 'identifier', 'value': 'id'},
+            {'type': 'identifier', 'value': 'name'}
         ],
         'from': ['users'],
         'where': {
-            'left': {'type': 'column', 'value': 'age'},
+            'left': {'type': 'identifier', 'value': 'age'},
             'op': '>=',
             'right': {'type': 'literal', 'value': '18'}
         },
         'group_by': [
-            {'type': 'column', 'value': 'country'}
+            {'type': 'identifier', 'value': 'country'}
         ]
     }
 

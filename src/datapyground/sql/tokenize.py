@@ -15,7 +15,7 @@ of tokenizing literals:
 - The tokenizer does not support escape characters in string literals.
 - The tokenizer does not support escape sequences in string literals.
 
-For a more robust tokenizer, you would typically use a dedicated library like
+For a more robust parser, you would typically use a dedicated library like
 SQLGlot or Calcite. But for the purposes of DataPyground, this simple tokenizer
 is good enough and it serves the purpose of showcasing how SQL queries can be
 parsed and executed.
@@ -36,9 +36,16 @@ def GENERATE_TOKEN_SPECIFICATION() -> list[tuple[str, str]]:
     because if a keyword is matched, it should not be matched as an identifier.
     """
     return [
-        ("KEYWORD", r"SELECT|INSERT|UPDATE|FROM|WHERE|GROUP BY|ORDER BY|LIMIT|OFFSET"),
-        ("IDENTIFIER", r"[A-Za-z_][A-Za-z0-9_]*"),
+        (
+            "KEYWORD",
+            r"SELECT|INSERT|UPDATE|FROM|WHERE|GROUP BY|ORDER BY|ASC|DESC|LIMIT|OFFSET|AS",
+        ),
+        ("TEXT_OPERATOR", r"\b(AND|OR|NOT)\b"),
         ("OPERATOR", r"<>|<=|>=|!=|==|=|<|>|\+|-|\*|/"),
+        (
+            "IDENTIFIER",
+            r"[A-Za-z_][A-Za-z0-9_\.]*",
+        ),  # like tablename, column_name, tablename.column_name
         ("LITERAL", r"\'[^\']*\'|\"[^\"]*\"|\d+(\.\d+)?"),
         ("PUNCTUATION", r",|\(|\)|;"),
         ("SKIP", r"\s+"),  # Skip spaces and tabs
@@ -149,6 +156,9 @@ class Tokenizer:
             "ORDER BY": OrderByToken,
             "LIMIT": LimitToken,
             "OFFSET": OffsetToken,
+            "ASC": SortingOrderToken,
+            "DESC": SortingOrderToken,
+            "AS": AliasToken,
         }
 
     def tokenize(self) -> list[Token]:
@@ -178,7 +188,7 @@ class Tokenizer:
                     token = cls(value)
                 elif kind == "IDENTIFIER":
                     token = IdentifierToken(value)
-                elif kind == "OPERATOR":
+                elif kind in ("OPERATOR", "TEXT_OPERATOR"):
                     token = OperatorToken(value)
                 elif kind == "LITERAL":
                     token = LiteralToken(value)
@@ -192,7 +202,6 @@ class Tokenizer:
             )  # move the tokenizer to the end of the matched token
             mo = self.get_next_token()  # repeat for the next token
 
-        tokens.append(EOFToken())
         return tokens
 
     def get_next_token(self) -> re.Match[str] | None:
@@ -281,6 +290,18 @@ class OffsetToken(KeywordToken):
     pass
 
 
+class SortingOrderToken(KeywordToken):
+    """Token representing the ASC and DESC keywords."""
+
+    pass
+
+
+class AliasToken(KeywordToken):
+    """Token representing the AS keyword."""
+
+    pass
+
+
 class IdentifierToken(Token):
     """Token representing an identifier (table name, column name, etc)."""
 
@@ -288,9 +309,16 @@ class IdentifierToken(Token):
 
 
 class OperatorToken(Token):
-    """Token representing an operator (comparison, arithmetic, etc)."""
+    """Token representing an operator (comparison, arithmetic, etc).
 
-    pass
+    Operators are always rappresented in uppercase if they are text operators.
+    """
+
+    def __init__(self, value: str) -> None:
+        """
+        :param value: The text value of the operator token.
+        """
+        super().__init__(value.upper())
 
 
 class LiteralToken(Token):
@@ -306,7 +334,7 @@ class PunctuationToken(Token):
 
 
 class EOFToken(Token):
-    """Token representing the end of the input text."""
+    """Special Token representing the end of the input text."""
 
     def __init__(self) -> None:
         """Value is hardcoded to EOF"""
