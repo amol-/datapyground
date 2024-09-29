@@ -1,4 +1,4 @@
-"""Support for SQL parsing and execution.
+"""Support for SQL parsing and query plans generation.
 
 This module provides support for parsing and executing SQL queries
 using the compute engine.
