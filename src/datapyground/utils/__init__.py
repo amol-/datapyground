@@ -8,6 +8,6 @@ Usually this will be generic Python utilities that could work
 in any Python project.
 """
 
-from . import inspect
+from . import inspect, tabulate
 
-__all__ = ("inspect",)
+__all__ = ("inspect", "tabulate")
