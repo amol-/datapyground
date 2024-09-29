@@ -4,9 +4,9 @@ An SQL expression is a combination of literals, identifiers, operators, and func
 can be evaluated to a value. This module provides a parser for SQL expressions that can
 parse expressions with the following features:
 
-- Arithmetic operators: +, -, *, /
-- Comparison operators: =, <, >, <=, >=, <>, !=
-- Logical operators: AND, OR, NOT
+- Arithmetic operators: ``+, -, *, /``
+- Comparison operators: ``=, <, >, <=, >=, <>, !=``
+- Logical operators: ``AND, OR, NOT``
 - Parentheses for grouping
 - Function calls with arguments
 - Identifiers and literals
@@ -21,57 +21,63 @@ methods based on the current token.
 
 In case of an expression like ``a + b * c != 3 AND NOT d``, the workflow would proceed as follows::
 
-- parse_expression (``a + b * c != 3 AND NOT d``)            # Handles OR last because it is the lowest precedence comparator
-    - parse_term (``AND``)                                   # Handles AND first because it has an higher precedence comparator
-        - parse_factor (``a + b * c != 3``)                  # Handles operands connected by AND
-            - parse_comparison (``=``)                       # Handles comparison operators
-                - parse_additive_expr (``a + b * c``)        # Handles addition last as they have lower math precedence
-                    - parse_multiplicative_expr (``b * c``)  # Handles multiplication first as they have higher math precedence
-                        - parse_unary_expr (``b``)           # Handles possible -X to negate values
-                            - parse_primary (``b``)          # Handles possible function calls wrapping an atom
-                                - parse_atom (``b``)         # Handles identifiers and literals
-                        - parse_unary_expr (``c``)
-                            - parse_primary (``c``)
-                                - parse_atom (``c``)
-                    - parse_multiplicative_expr (``a``)
-                        - parse_unary_expr (``a``)
-                            - parse_primary (``a``)
-                                - parse_atom (``a``)
-            - parse_additive_expr (``3``)                    # Handles the right side of the comparison, eventually processes the addition
-                - parse_multiplicative_expr (``3``)
-                    - parse_unary_expr (``3``)
-                        - parse_primary (``3``)
-                            - parse_atom (``3``)
-        - parse_factor (``NOT d``)                           # Handles the right side of the AND, processes NOT operator
-            - parse_unary_expr (``NOT d``)
-                - parse_primary (``d``)
-                    - parse_atom (``d``)
+    - parse_expression (``a + b * c != 3 AND NOT d``)            # Handles OR last because it is the lowest precedence comparator
+        - parse_term (``AND``)                                   # Handles AND first because it has an higher precedence comparator
+            - parse_factor (``a + b * c != 3``)                  # Handles operands connected by AND
+                - parse_comparison (``=``)                       # Handles comparison operators
+                    - parse_additive_expr (``a + b * c``)        # Handles addition last as they have lower math precedence
+                        - parse_multiplicative_expr (``b * c``)  # Handles multiplication first as they have higher math precedence
+                            - parse_unary_expr (``b``)           # Handles possible -X to negate values
+                                - parse_primary (``b``)          # Handles possible function calls wrapping an atom
+                                    - parse_atom (``b``)         # Handles identifiers and literals
+                            - parse_unary_expr (``c``)
+                                - parse_primary (``c``)
+                                    - parse_atom (``c``)
+                        - parse_multiplicative_expr (``a``)
+                            - parse_unary_expr (``a``)
+                                - parse_primary (``a``)
+                                    - parse_atom (``a``)
+                - parse_additive_expr (``3``)                    # Handles the right side of the comparison, eventually processes the addition
+                    - parse_multiplicative_expr (``3``)
+                        - parse_unary_expr (``3``)
+                            - parse_primary (``3``)
+                                - parse_atom (``3``)
+            - parse_factor (``NOT d``)                           # Handles the right side of the AND, processes NOT operator
+                - parse_unary_expr (``NOT d``)
+                    - parse_primary (``d``)
+                        - parse_atom (``d``)
 
 The resulting AST would look like this::
 
-{
-    "type": "conjunction",
-    "op": "AND",
-    "left": {
-        "type": "comparison",
-        "op": "=",
+    {
+        "type": "conjunction",
+        "op": "AND",
         "left": {
-            "type": "binary_op",
-            "op": "+",
-            "left": {"type": "identifier", "value": "a"},
-            "right": {
+            "type": "comparison",
+            "op": "=",
+            "left": {
                 "type": "binary_op",
-                "op": "*",
-                "left": {"type": "identifier", "value": "b"},
-                "right": {"type": "identifier", "value": "c"}
+                "op": "+",
+                "left": {"type": "identifier", "value": "a"},
+                "right": {
+                    "type": "binary_op",
+                    "op": "*",
+                    "left": {"type": "identifier", "value": "b"},
+                    "right": {"type": "identifier", "value": "c"}
+                }
+            },
+            "right": {
+                "type": "unary_op",
+                "op": "-",
+                "operand": {"type": "literal", "value": 3}
             }
         },
         "right": {
             "type": "unary_op",
-            "op": "-",
-            "operand": {"type": "literal", "value": 3}
+            "op": "NOT",
+            "operand": {"type": "identifier", "value": "d"}
         }
-    },
+    }
 """
 
 from .tokenize import (
