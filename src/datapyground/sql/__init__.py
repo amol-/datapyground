@@ -22,13 +22,19 @@ a sequence of tokens like::
 
     [SELECT, *, FROM, table, WHERE, column, =, 42]
 
-The tokenizer implemented as part of DataPyground is a simple regex-based tokenizer.
+The :class:`datapyground.sql.tokenize.Tokenizer` implemented as part of DataPyground is a simple regex-based tokenizer.
 It uses regular expressions to match which tokens exist within the input query.
 This is a simple approach that has some limitations. For example, nested quotes
 in string literals are not correctly supported.
 But it's good enough for the purposes of showcasing how SQL queries can be parsed and executed.
 
-The **Parser** is responsible for converting the sequence of tokens into an abstract syntax tree (AST).
+The :class:`datapyground.sql.expressions.ExpressionParser`
+is responsible for handling a sequence of tokens representing expressions.
+It is used by the main parser to parse expressions like ``age >= 18 AND city = "New York``.
+The main parser will delegate work to it everytime it finds an expression.
+
+The :class:`datapyground.sql.parser.Parser` is **the main class of the package**,
+in charge of converting a text query abstract syntax tree (AST).
 In the case of DataPyground SQL parser, the AST is a simple nested dictionaries structure that represents the
 structure of the query. For example, the query ``"SELECT id, name FROM users WHERE age >= 18 GROUP BY country"``
 would be represented as an AST like::

@@ -346,7 +346,7 @@ class SelectStatementParser:
         """Parse an expression from the SQL query.
 
         For the actual parsing it relies on the
-        :class:`dataPyground.sql.expressions.ExpressionParser`,
+        :class:`datapyground.sql.expressions.ExpressionParser`,
         after which it advances the parser by the number of tokens
         consumed by the expression parser.
         """
