@@ -1,4 +1,25 @@
-"""Format tabular data into a text table for print."""
+"""Format tabular data into a text table for print.
+
+the `tabulate` function takes a `pyarrow.RecordBatch` and formats it into a text table.
+It will truncate long strings, format floats to 2 decimal places, and limit the number of rows to display.
+The function is used to display the result of a query in the DataPyground SQL engine.
+
+Example:
+
+    >>> import pyarrow as pa
+    >>> data = {
+    ...     "Product": ["Videogame", "Laptop", "Laptop"],
+    ...     "Quantity": [8, 8, 7],
+    ...     "Price": [66.5, 38.72, 77.46],
+    ... }
+    >>> table = pa.RecordBatch.from_pydict(data)
+    >>> print(tabulate(table))
+    Product   | Quantity | Price
+    --------- | -------- | -----
+    Videogame | 8        | 66.50
+    Laptop    | 8        | 38.72
+    Laptop    | 7        | 77.46
+"""
 
 from typing import Any
 

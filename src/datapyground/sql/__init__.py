@@ -10,11 +10,21 @@ you would typically use a dedicated library like SQLGlot or Calcite.
 But given that DataPyground is a learning platform, the approach of implementing
 a from scratch SQL parser is useful for educational purposes on the concept of parsing.
 
-The SQL support is consiteuted by three components:
+The SQL support is constituted by three major components:
 
 1. Tokenizer
-2. Parser
+2. Parser (and ExpressionParser)
 3. Planner
+
+To execute a SQL query, you would typically combine them as following::
+
+    sql = "SELECT id, name FROM users WHERE age >= 18"
+    query = Parser(sql).parse()
+    planner = SQLQueryPlanner(query, catalog={"users": "file.csv"})
+    queryplan = planner.plan()
+
+The `queryplan` object would be a tree of nodes that can be executed by the compute engine
+to produce the result of the query. See the :mod:`datapyground.compute` module for more details.
 
 The **Tokenizer** is responsible for converting the input SQL query into a sequence of tokens.
 Given a query like ``"SELECT * FROM table WHERE column = 42"``, the tokenizer will produce
@@ -33,7 +43,7 @@ is responsible for handling a sequence of tokens representing expressions.
 It is used by the main parser to parse expressions like ``age >= 18 AND city = "New York``.
 The main parser will delegate work to it everytime it finds an expression.
 
-The :class:`datapyground.sql.parser.Parser` is **the main class of the package**,
+The :class:`datapyground.sql.parser.Parser` is **the main class of the parser**,
 in charge of converting a text query abstract syntax tree (AST).
 In the case of DataPyground SQL parser, the AST is a simple nested dictionaries structure that represents the
 structure of the query. For example, the query ``"SELECT id, name FROM users WHERE age >= 18 GROUP BY country"``
@@ -56,7 +66,7 @@ would be represented as an AST like::
         ]
     }
 
-The :class:`datapyground.sql.planner.SQLQueryPlanner`` is responsible for
+The :class:`datapyground.sql.planner.SQLQueryPlanner` is responsible for
 taking the AST and generating a query plan for the compute engine to execute
 the requested query.
 This is done by traversing the AST and generating an equivalent tree of
