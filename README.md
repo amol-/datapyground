@@ -40,6 +40,13 @@ pip install datapyground
 Once installed refer to the [Documentation](http://alessandro.molina.fyi/datapyground/) 
 of each component to learn how to use it.
 
+### Commands
+
+`DataPyground` exposes some commands to play around with its features,
+currently the following commands are provided:
+
+- `pyground-fquery` which allows to run SQL queries on CSV and Parquet files.
+
 ## Contributing
 
 Contributions are welcomed and encouraged, it is meant
