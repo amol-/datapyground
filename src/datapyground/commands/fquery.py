@@ -1,8 +1,8 @@
 """Command line interface for executing SQL queries on files.
 
 This module provides a command line interface for executing SQL queries on files
-based on the DataPyground :class:`datapyground.sql.SQLParser` and
-:class:`datapyground.sql.SQLQueryPlanner`.
+based on the DataPyground :class:`datapyground.sql.parser.Parser` and
+:class:`datapyground.sql.planner.SQLQueryPlanner`.
 
 The results of the execution are then printed to the console in a tabular format
 using the :class:`datapyground.utils.tabulate` module.

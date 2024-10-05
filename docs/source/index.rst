@@ -14,6 +14,7 @@ DataPyground documentation
    :toctree: _autosummary
    :recursive:
 
+   commands
    compute
    sql
    utils
