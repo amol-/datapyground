@@ -45,7 +45,20 @@ of each component to learn how to use it.
 `DataPyground` exposes some commands to play around with its features,
 currently the following commands are provided:
 
-- `pyground-fquery` which allows to run SQL queries on CSV and Parquet files.
+#### pyground-fquery
+
+Allows to run SQL queries on CSV and Parquet files:
+
+```bash
+$ pyground-fquery -t sales=examples/data/sales.csv "SELECT Product, Quantity, Price, Quantity*Price AS Total FROM sales WHERE Product='Videogame' OR Product='Laptop' ORDER BY Total DESC LIMIT 5"
+Product   | Quantity | Price | Total 
+--------- | -------- | ----- | ------
+Videogame | 10       | 98.31 | 983.10
+Laptop    | 10       | 97.24 | 972.40
+Videogame | 10       | 97.21 | 972.10
+Videogame | 10       | 96.12 | 961.20
+Laptop    | 10       | 92.23 | 922.30
+```
 
 ## Contributing
 
