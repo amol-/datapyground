@@ -45,7 +45,7 @@ of each component to learn how to use it.
 `DataPyground` exposes some commands to play around with its features,
 currently the following commands are provided:
 
-#### pyground-fquery
+#### pyground-fquery
 
 Allows to run SQL queries on CSV and Parquet files:
 
