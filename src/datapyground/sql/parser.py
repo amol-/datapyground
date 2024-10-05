@@ -107,7 +107,7 @@ class Parser:
             raise NotImplementedError("UPDATE statements are not supported yet.")
         else:
             # Unsupported statement type encountered
-            raise SQLParseError("Unsupported statement type.")
+            raise SQLParseError(f"Unsupported statement type: {sql_command.value}")
 
 
 class SelectStatementParser:

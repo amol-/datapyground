@@ -5,7 +5,9 @@ from datapyground.compute import (
     CSVDataSource,
     FilterNode,
     FunctionCallExpression,
+    PaginateNode,
     ProjectNode,
+    SortNode,
 )
 from datapyground.sql.parser import Parser
 from datapyground.sql.planner import SQLQueryPlanner
@@ -124,11 +126,12 @@ def test_select_with_order_by():
     query = Parser(sql).parse()
     planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
     plan = planner.plan()
-    assert isinstance(plan, ProjectNode)
-    assert plan.select == ["id", "name"]
-    assert isinstance(plan.child, CSVDataSource)
-    assert plan.child.filename == "users.csv"
-    # Assuming the planner handles ORDER BY in the ProjectNode or a separate node
+    assert isinstance(plan, SortNode)
+    assert plan.sorting == [("age", "descending")]
+    assert isinstance(plan.child, ProjectNode)
+    assert plan.child.select == ["id", "name"]
+    assert isinstance(plan.child.child, CSVDataSource)
+    assert plan.child.child.filename == "users.csv"
 
 
 def test_select_with_limit():
@@ -136,11 +139,13 @@ def test_select_with_limit():
     query = Parser(sql).parse()
     planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
     plan = planner.plan()
-    assert isinstance(plan, ProjectNode)
-    assert plan.select == ["id", "name"]
-    assert isinstance(plan.child, CSVDataSource)
-    assert plan.child.filename == "users.csv"
-    # Assuming the planner handles LIMIT in the ProjectNode or a separate node
+    assert isinstance(plan, PaginateNode)
+    assert plan.length == 10
+    assert plan.offset == 0
+    assert isinstance(plan.child, ProjectNode)
+    assert plan.child.select == ["id", "name"]
+    assert isinstance(plan.child.child, CSVDataSource)
+    assert plan.child.child.filename == "users.csv"
 
 
 def test_select_with_offset():
@@ -148,11 +153,13 @@ def test_select_with_offset():
     query = Parser(sql).parse()
     planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
     plan = planner.plan()
-    assert isinstance(plan, ProjectNode)
-    assert plan.select == ["id", "name"]
-    assert isinstance(plan.child, CSVDataSource)
-    assert plan.child.filename == "users.csv"
-    # Assuming the planner handles OFFSET in the ProjectNode or a separate node
+    assert isinstance(plan, PaginateNode)
+    assert plan.length == PaginateNode.INF
+    assert plan.offset == 5
+    assert isinstance(plan.child, ProjectNode)
+    assert plan.child.select == ["id", "name"]
+    assert isinstance(plan.child.child, CSVDataSource)
+    assert plan.child.child.filename == "users.csv"
 
 
 def test_select_with_limit_and_offset():
@@ -160,8 +167,10 @@ def test_select_with_limit_and_offset():
     query = Parser(sql).parse()
     planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
     plan = planner.plan()
-    assert isinstance(plan, ProjectNode)
-    assert plan.select == ["id", "name"]
-    assert isinstance(plan.child, CSVDataSource)
-    assert plan.child.filename == "users.csv"
-    # Assuming the planner handles LIMIT and OFFSET in the ProjectNode or a separate node
+    assert isinstance(plan, PaginateNode)
+    assert plan.length == 10
+    assert plan.offset == 5
+    assert isinstance(plan.child, ProjectNode)
+    assert plan.child.select == ["id", "name"]
+    assert isinstance(plan.child.child, CSVDataSource)
+    assert plan.child.child.filename == "users.csv"

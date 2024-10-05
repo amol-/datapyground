@@ -22,15 +22,19 @@ class PaginateNode(QueryPlanNode):
         2: skip because > length=1 and one row was already emitted.
     """
 
-    def __init__(self, offset: int, length: int, child: QueryPlanNode) -> None:
+    INF = float("inf")
+
+    def __init__(
+        self, offset: int | None, length: int | None, child: QueryPlanNode
+    ) -> None:
         """
         :param offset: From which row to take data, first row is 0.
         :param length: How many rows to take after offset was reached.
         :param child: the node from which to consume the rows.
         """
-        self.offset = offset
-        self.length = length
-        self.end = offset + length
+        self.offset = offset or 0
+        self.length = length or self.INF
+        self.end = self.offset + self.length
         self.child = child
 
     def __str__(self) -> str:

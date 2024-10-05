@@ -73,7 +73,8 @@ This is done by traversing the AST and generating an equivalent tree of
 :class:`datapyground.compute.base.QueryPlanNode` objects.
 """
 
-from .parser import Parser
+from .expressions import SQLExpressionError
+from .parser import Parser, SQLParseError
 from .planner import SQLQueryPlanner
 
-__all__ = ("Parser", "SQLQueryPlanner")
+__all__ = ("Parser", "SQLQueryPlanner", "SQLParseError", "SQLExpressionError")

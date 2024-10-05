@@ -160,7 +160,7 @@ def test_unsupported_statement():
     parser = Parser(query)
     with pytest.raises(SQLParseError) as excinfo:
         parser.parse()
-    assert "Unsupported statement type." in str(excinfo.value)
+    assert "Unsupported statement type: DELETE" in str(excinfo.value)
 
 
 def test_empty_query():

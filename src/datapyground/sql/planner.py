@@ -22,7 +22,9 @@ from ..compute import (
     CSVDataSource,
     FilterNode,
     FunctionCallExpression,
+    PaginateNode,
     ProjectNode,
+    SortNode,
     col,
     lit,
 )
@@ -70,13 +72,42 @@ class SQLQueryPlanner:
         """Processes a SELECT statement AST by parsing its components.
 
         :param query: The parsed SELECT statement AST.
+
+        The SELECT statement generates a plan with the following structure::
+
+            - PaginateNode
+                - SortNode
+                    - ProjectNode
+                        - FilterNode
+                            - *DataSource
+
+        The structure is based on the fact that:
+
+        - The first thing we want to do is to filter the rows based
+          on the WHERE clause as that reduces the amount of data
+          we have to deal with.
+        - Then we proceed to project the columns we want to keep and
+          compute any required projections. This has to happen
+          before we run the ORDER BY clause, as we might have
+          to sort by a column that was computed in the projection.
+        - Then we sort the rows based on the ORDER BY clause.
+          This has to happen before the pagination, as we need to
+          know the order of the rows to paginate them correctly.
+        - Finally, we paginate the rows based on the LIMIT and OFFSET
         """
         datasource = query["from"]
 
-        return self._parse_projections(
-            query["projections"],
-            child=self._parse_where(
-                query.get("where"), child=self._parse_from(datasource)
+        return self._parse_pagination(
+            query.get("offset"),
+            query.get("limit"),
+            child=self._parse_order_by(
+                query.get("order_by"),
+                child=self._parse_projections(
+                    query["projections"],
+                    child=self._parse_where(
+                        query.get("where"), child=self._parse_from(datasource)
+                    ),
+                ),
             ),
         )
 
@@ -142,7 +173,7 @@ class SQLQueryPlanner:
         if filename.endswith(".csv"):
             return CSVDataSource(filename)
         else:
-            raise NotImplementedError("File format not supported")
+            raise NotImplementedError(f"File format not supported: {filename}")
 
     def _parse_where(
         self, where_clause: dict | None, child: QueryPlanNode
@@ -162,6 +193,49 @@ class SQLQueryPlanner:
             return child
 
         return FilterNode(self._parse_expression(where_clause), child=child)
+
+    def _parse_pagination(
+        self, offset: int | None, limit: int | None, child: QueryPlanNode
+    ) -> QueryPlanNode:
+        """Parse the LIMIT and OFFSET clauses of the SELECT statement.
+
+        If the limit or offset are not provided, it will return the child node as is.
+        Otherwise it will process the limit and offset values and return a new
+        :class:`datapyground.compute.base.QueryPlanNode` with the pagination applied.
+
+        :param offset: The OFFSET value.
+        :param limit: The LIMIT value.
+        :param child: The child node to apply the pagination to.
+        """
+        if offset is None and limit is None:
+            return child
+
+        return PaginateNode(offset=offset, length=limit, child=child)
+
+    def _parse_order_by(
+        self, order_by: list[dict] | None, child: QueryPlanNode
+    ) -> QueryPlanNode:
+        """Parse the ORDER BY clause of the SELECT statement.
+
+        Creates a :class:`datapyground.compute.SortNode` node with the columns
+        to sort by and the direction of the sort.
+
+        :param order_by: The list of columns to sort by as provided by the AST.
+        :param child: The child node to apply the sorting to.
+        """
+        if order_by is None:
+            return child
+
+        keys = []
+        descending = []
+        for ordering in order_by:
+            keys.append(ordering["column"])
+            if ordering["order"].lower() == "desc":
+                descending.append(True)
+            else:
+                descending.append(False)
+
+        return SortNode(keys=keys, descending=descending, child=child)
 
     def _parse_identifier(self, node: dict) -> ColumnRef:
         """Parse an identifier node from the AST."""
@@ -211,19 +285,3 @@ class SQLQueryPlanner:
             return self._parse_literal(node)
         else:
             raise ValueError(f"Unsupported expression type: {node['type']}")
-
-
-if __name__ == "__main__":
-    from datapyground.sql.parser import Parser
-    from datapyground.utils.tabulate import tabulate
-
-    sql = "SELECT Product, Quantity, Price, Quantity*Price AS Total FROM sales WHERE Product='Videogame' OR Product='Laptop'"
-    query = Parser(sql).parse()
-    planner = SQLQueryPlanner(query)
-    plan = planner.plan()
-    print(sql)
-    print("")
-    print(plan)
-    print("")
-    for batch in plan.batches():
-        print(tabulate(batch))
