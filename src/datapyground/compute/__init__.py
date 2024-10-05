@@ -56,7 +56,7 @@ from .aggregate import (
     SumAggregation,
 )
 from .base import ColumnRef, col, lit
-from .datasources import CSVDataSource, PyArrowTableDataSource
+from .datasources import CSVDataSource, ParquetDataSource, PyArrowTableDataSource
 from .expressions import FunctionCallExpression
 from .filtering import FilterNode
 from .pagination import PaginateNode
@@ -65,6 +65,7 @@ from .sorting import ExternalSortNode, SortNode
 
 __all__ = (
     "CSVDataSource",
+    "ParquetDataSource",
     "PyArrowTableDataSource",
     "FilterNode",
     "FunctionCallExpression",

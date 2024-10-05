@@ -23,6 +23,7 @@ from ..compute import (
     FilterNode,
     FunctionCallExpression,
     PaginateNode,
+    ParquetDataSource,
     ProjectNode,
     SortNode,
     col,
@@ -172,6 +173,8 @@ class SQLQueryPlanner:
 
         if filename.endswith(".csv"):
             return CSVDataSource(filename)
+        elif filename.endswith(".parquet"):
+            return ParquetDataSource(filename)
         else:
             raise NotImplementedError(f"File format not supported: {filename}")
 

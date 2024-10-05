@@ -10,6 +10,7 @@ data from CSV files or equivalent operations
 
 import pyarrow as pa
 import pyarrow.csv
+import pyarrow.parquet
 
 from .base import QueryPlanNode
 
@@ -41,6 +42,33 @@ class CSVDataSource(QueryPlanNode):
         ) as reader:
             for batch in reader:
                 yield batch
+
+
+class ParquetDataSource(QueryPlanNode):
+    """Load data from a Parquet file.
+
+    Given a local parquet file path, load the content,
+    convert it into Arrow format, and emit it
+    for the next nodes of the query plan to consume.
+    """
+
+    def __init__(self, filename: str, batch_size: int | None = None) -> None:
+        """
+        :param filename: The path of the local parquet file.
+        :param batch_size: How big to make batches of data,
+                           Influences how many batches will be produced
+        """
+        self.filename = filename
+        self.batch_size = batch_size or 65536
+
+    def __str__(self) -> str:
+        return f"ParquetDataSource({self.filename}, batch_size={self.batch_size})"
+
+    def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
+        """Open CSV file and emit the batches."""
+        yield from pa.parquet.ParquetFile(self.filename).iter_batches(
+            batch_size=self.batch_size
+        )
 
 
 class PyArrowTableDataSource(QueryPlanNode):
