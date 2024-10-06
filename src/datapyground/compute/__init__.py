@@ -59,6 +59,7 @@ from .base import ColumnRef, col, lit
 from .datasources import CSVDataSource, ParquetDataSource, PyArrowTableDataSource
 from .expressions import FunctionCallExpression
 from .filtering import FilterNode
+from .join import InnnerJoinNode
 from .pagination import PaginateNode
 from .selection import ProjectNode
 from .sorting import ExternalSortNode, SortNode
@@ -82,4 +83,5 @@ __all__ = (
     "MeanAggregation",
     "MinAggregation",
     "SumAggregation",
+    "InnnerJoinNode",
 )
