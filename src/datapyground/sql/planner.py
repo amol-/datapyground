@@ -15,20 +15,25 @@ Example:
 """
 
 import os
+from typing import Type
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from ..compute import (
+    AggregateNode,
     CSVDataSource,
     FilterNode,
     FunctionCallExpression,
     PaginateNode,
     ParquetDataSource,
     ProjectNode,
+    PyArrowTableDataSource,
     SortNode,
     col,
     lit,
 )
+from ..compute import aggregate as agg
 from ..compute.base import ColumnRef, Expression, Literal, QueryPlanNode
 
 
@@ -49,8 +54,13 @@ class SQLQueryPlanner:
         "OR": pc.or_,
         "NOT": pc.invert,
         "ROUND": pc.round,
-        "SUM": pc.sum,
-        "COUNT": pc.count,
+    }
+    AGGREGATIONS_MAP: dict[str, Type[agg.Aggregation]] = {
+        "SUM": agg.SumAggregation,
+        "COUNT": agg.CountAggregation,
+        "AVG": agg.MeanAggregation,
+        "MIN": agg.MinAggregation,
+        "MAX": agg.MaxAggregation,
     }
 
     def __init__(self, query: dict, catalog: dict[str, str] | None = None) -> None:
@@ -79,14 +89,18 @@ class SQLQueryPlanner:
             - PaginateNode
                 - SortNode
                     - ProjectNode
-                        - FilterNode
-                            - *DataSource
+                        - AggregateNode
+                            - FilterNode
+                                - *DataSource
 
         The structure is based on the fact that:
 
         - The first thing we want to do is to filter the rows based
           on the WHERE clause as that reduces the amount of data
           we have to deal with.
+        - After we have the data we can process aggregations from GROUP BY, this
+          has to happen before the projections, as the projections
+          might want to compute derived columns from the aggregations.
         - Then we proceed to project the columns we want to keep and
           compute any required projections. This has to happen
           before we run the ORDER BY clause, as we might have
@@ -105,12 +119,60 @@ class SQLQueryPlanner:
                 query.get("order_by"),
                 child=self._parse_projections(
                     query["projections"],
-                    child=self._parse_where(
-                        query.get("where"), child=self._parse_from(datasource)
+                    child=self._parse_group_by(
+                        query["projections"],
+                        query["group_by"],
+                        child=self._parse_where(
+                            query.get("where"), self._parse_from(datasource)
+                        ),
                     ),
                 ),
             ),
         )
+
+    def _parse_group_by(
+        self,
+        projections: dict | None,
+        group_by: list[dict] | None,
+        child: QueryPlanNode,
+    ) -> QueryPlanNode:
+        """Parse the aggregations part of the SELECT statement.
+
+        Creates a :class:`datapyground.compute.AggregateNode`
+        with the columns that need to compute aggregations.
+
+        :param projections: The list of projections the aggregations should be pulled from.
+        :param group_by: The list of identifiers that constitute the keys for the grouping process.
+        :param child: The node to which to apply the aggregations to.
+
+        .. note::
+
+            This method will rewrite the projections to remove the aggregations,
+            so that subsequent nodes can process them as plain columns.
+        """
+        if not group_by:
+            return child
+
+        if not projections:
+            raise ValueError("GROUP BY requires at least one aggregation")
+
+        grouping_keys = [self._parse_identifier(node).name for node in group_by]
+        aggregations = {}
+        for idx, node in enumerate(projections):
+            alias: str = node["alias"]
+            expr = self._parse_aggregation(node["value"])
+            if expr is not None:
+                if not alias:
+                    raise ValueError("Aggregations must have an alias")
+                aggregations[alias] = expr
+                # Rewrite the aggregations as plain projections that the ProjectNode can forward as they are.
+                projections[idx] = {
+                    "type": "projection",
+                    "value": {"type": "identifier", "value": alias},
+                    "alias": None,
+                }
+
+        return AggregateNode(keys=grouping_keys, aggregations=aggregations, child=child)
 
     def _parse_projections(
         self, projections: dict, child: QueryPlanNode
@@ -136,6 +198,8 @@ class SQLQueryPlanner:
                 raise ValueError(
                     "Projection must have an alias, when it's not a column reference"
                 )
+            elif isinstance(expr, agg.Aggregation):
+                raise ValueError("Aggregations must be processed by the AggregateNode")
             return alias, expr
 
         parsed_projections = [_parse_projection(p) for p in projections]
@@ -162,6 +226,10 @@ class SQLQueryPlanner:
             raise ValueError("Only single table queries are supported")
 
         tablename = from_clause[0]
+
+        if isinstance(self.catalog.get(tablename), (pa.Table, pa.RecordBatch)):
+            return PyArrowTableDataSource(self.catalog[tablename])
+
         if tablename in self.catalog:
             filename = self.catalog[tablename]
         elif os.path.exists(tablename + ".csv"):
@@ -252,6 +320,22 @@ class SQLQueryPlanner:
             raise ValueError(f"Unsupported literal type: {node['type']}")
         return lit(node["value"])
 
+    def _parse_aggregation(self, node: dict) -> agg.Aggregation | None:
+        """Parse an aggregation function from the AST.
+
+        If a supported aggregation function is found,
+        it will create a :class:`datapyground.compute.Aggregation`.
+        Returns ``None`` if it's not an aggregation or it's not supported.
+
+        :param node: The aggregation node from the AST.
+        """
+        if node["type"] == "function_call":
+            function_name = node["name"]
+            if function_name in self.AGGREGATIONS_MAP:
+                columns = [self._parse_identifier(arg).name for arg in node["args"]]
+                return self.AGGREGATIONS_MAP[function_name](*columns)
+        return None
+
     def _parse_expression(self, node: dict) -> Expression:
         """Parse an expression node from the AST.
 
@@ -280,8 +364,11 @@ class SQLQueryPlanner:
                 self.FUNCTIONS_MAP[node["op"]], self._parse_expression(node["child"])
             )
         elif node["type"] == "function_call":
-            args = [self._parse_expression(arg) for arg in node["args"]]
-            return FunctionCallExpression(self.FUNCTIONS_MAP[node["name"]], *args)
+            if node["name"] in self.FUNCTIONS_MAP:
+                args = [self._parse_expression(arg) for arg in node["args"]]
+                return FunctionCallExpression(self.FUNCTIONS_MAP[node["name"]], *args)
+            else:
+                raise ValueError(f"Unsupported function: {node['name']}")
         elif node["type"] == "identifier":
             return self._parse_identifier(node)
         elif node["type"] == "literal":

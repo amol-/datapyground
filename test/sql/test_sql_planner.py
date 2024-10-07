@@ -2,6 +2,7 @@ import pyarrow.compute as pc
 import pytest
 
 from datapyground.compute import (
+    AggregateNode,
     CSVDataSource,
     FilterNode,
     FunctionCallExpression,
@@ -9,6 +10,7 @@ from datapyground.compute import (
     ProjectNode,
     SortNode,
 )
+from datapyground.compute import aggregate as agg
 from datapyground.sql.parser import Parser
 from datapyground.sql.planner import SQLQueryPlanner
 
@@ -109,18 +111,6 @@ def test_select_with_missing_table():
         planner.plan()
 
 
-def test_select_with_group_by():
-    sql = "SELECT id, COUNT(id) AS count FROM users GROUP BY id"
-    query = Parser(sql).parse()
-    planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
-    plan = planner.plan()
-    assert isinstance(plan, ProjectNode)
-    assert plan.select == ["id"]
-    assert "count" in plan.project
-    assert isinstance(plan.project["count"], FunctionCallExpression)
-    assert plan.project["count"].func == pc.count
-
-
 def test_select_with_order_by():
     sql = "SELECT id, name FROM users ORDER BY age DESC"
     query = Parser(sql).parse()
@@ -174,3 +164,62 @@ def test_select_with_limit_and_offset():
     assert plan.child.select == ["id", "name"]
     assert isinstance(plan.child.child, CSVDataSource)
     assert plan.child.child.filename == "users.csv"
+
+
+def test_select_with_group_by_count():
+    sql = "SELECT id, COUNT(id) AS count FROM users GROUP BY id"
+    query = Parser(sql).parse()
+    planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
+    plan = planner.plan()
+    assert isinstance(plan, ProjectNode)
+    assert plan.select == ["id", "count"]
+    assert isinstance(plan.child, AggregateNode)
+    assert plan.child.keys == ["id"]
+    assert "count" in plan.child.aggregations
+    assert isinstance(plan.child.aggregations["count"], agg.CountAggregation)
+
+
+def test_select_with_group_by_avg():
+    sql = "SELECT id, AVG(age) AS average_age FROM users GROUP BY id"
+    query = Parser(sql).parse()
+    planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
+    plan = planner.plan()
+    assert isinstance(plan, ProjectNode)
+    assert plan.select == ["id", "average_age"]
+    assert isinstance(plan.child, AggregateNode)
+    assert plan.child.keys == ["id"]
+    assert "average_age" in plan.child.aggregations
+    assert isinstance(plan.child.aggregations["average_age"], agg.MeanAggregation)
+
+
+def test_select_with_group_by_multiple_aggregations():
+    sql = (
+        "SELECT id, COUNT(id) AS count, AVG(age) AS average_age FROM users GROUP BY id"
+    )
+    query = Parser(sql).parse()
+    planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
+    plan = planner.plan()
+    assert isinstance(plan, ProjectNode)
+    assert plan.select == ["id", "count", "average_age"]
+    assert isinstance(plan.child, AggregateNode)
+    assert plan.child.keys == ["id"]
+    assert "average_age" in plan.child.aggregations
+    assert "count" in plan.child.aggregations
+    assert isinstance(plan.child.aggregations["average_age"], agg.MeanAggregation)
+    assert isinstance(plan.child.aggregations["count"], agg.CountAggregation)
+
+
+def test_select_with_group_by_and_projection():
+    sql = "SELECT id, COUNT(id) AS count, AVG(age) AS average_age, average_age + 1 AS adjusted_avg_age FROM users GROUP BY id"
+    query = Parser(sql).parse()
+    planner = SQLQueryPlanner(query, catalog={"users": "users.csv"})
+    plan = planner.plan()
+    assert isinstance(plan, ProjectNode)
+    assert plan.select == ["id", "count", "average_age"]
+    assert "adjusted_avg_age" in plan.project
+    assert isinstance(plan.child, AggregateNode)
+    assert plan.child.keys == ["id"]
+    assert "average_age" in plan.child.aggregations
+    assert "count" in plan.child.aggregations
+    assert isinstance(plan.child.aggregations["average_age"], agg.MeanAggregation)
+    assert isinstance(plan.child.aggregations["count"], agg.CountAggregation)
