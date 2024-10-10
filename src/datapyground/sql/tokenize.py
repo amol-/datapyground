@@ -38,7 +38,7 @@ def GENERATE_TOKEN_SPECIFICATION() -> list[tuple[str, str]]:
     return [
         (
             "KEYWORD",
-            r"SELECT|INSERT|UPDATE|FROM|WHERE|GROUP BY|ORDER BY|ASC|DESC|LIMIT|OFFSET|AS",
+            r"SELECT|INSERT|UPDATE|FROM|WHERE|GROUP BY|ORDER BY|ASC|DESC|LIMIT|OFFSET|AS|JOIN|ON|INNER|OUTER|LEFT|RIGHT|FULL",
         ),
         ("TEXT_OPERATOR", r"\b(AND|OR|NOT)\b"),
         ("OPERATOR", r"<>|<=|>=|!=|==|=|<|>|\+|-|\*|/"),
@@ -159,6 +159,13 @@ class Tokenizer:
             "ASC": SortingOrderToken,
             "DESC": SortingOrderToken,
             "AS": AliasToken,
+            "JOIN": JoinToken,
+            "ON": JoinOnToken,
+            "INNER": JoinTypeToken,
+            "OUTER": JoinTypeToken,
+            "LEFT": JoinTypeToken,
+            "RIGHT": JoinTypeToken,
+            "FULL": JoinTypeToken,
         }
 
     def tokenize(self) -> list[Token]:
@@ -298,6 +305,24 @@ class SortingOrderToken(KeywordToken):
 
 class AliasToken(KeywordToken):
     """Token representing the AS keyword."""
+
+    pass
+
+
+class JoinToken(KeywordToken):
+    """Token representing the JOIN keyword."""
+
+    pass
+
+
+class JoinOnToken(KeywordToken):
+    """Token representing the ON keyword in a JOIN clause."""
+
+    pass
+
+
+class JoinTypeToken(KeywordToken):
+    """Token representing the INNER, OUTER, LEFT, RIGHT, and FULL keywords in a JOIN clause."""
 
     pass
 

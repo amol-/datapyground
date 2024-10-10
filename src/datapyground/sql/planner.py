@@ -5,13 +5,16 @@ query plan from the AST of the parsed SQL query.
 
 Example:
 
+    >>> import pyarrow as pa
+    >>> sales_table = pa.table({"Product": ["Videogame", "Laptop", "Videogame"], "Quantity": [2, 1, 3], "Price": [50, 1000, 60]})
+    >>>
     >>> from datapyground.sql.parser import Parser
     >>> from datapyground.sql.planner import SQLQueryPlanner
     >>> sql = "SELECT Product, Quantity, Price, Quantity*Price AS Total FROM sales WHERE Product='Videogame' OR Product='Laptop'"
     >>> query = Parser(sql).parse()
-    >>> planner = SQLQueryPlanner(query, catalog={"sales": "sales.csv"})
+    >>> planner = SQLQueryPlanner(query, catalog={"sales": sales_table})
     >>> str(planner.plan())
-    "ProjectNode(select=['Product', 'Quantity', 'Price'], project={'Total': pyarrow.compute.multiply(ColumnRef(Quantity),ColumnRef(Price))}, child=FilterNode(filter=pyarrow.compute.or_(pyarrow.compute.equal(ColumnRef(Product),Literal(<pyarrow.StringScalar: 'Videogame'>)),pyarrow.compute.equal(ColumnRef(Product),Literal(<pyarrow.StringScalar: 'Laptop'>))), child=CSVDataSource(sales.csv, block_size=None)))"
+    "ProjectNode(select=['sales.Product', 'sales.Quantity', 'sales.Price'], project={'Total': pyarrow.compute.multiply(ColumnRef(sales.Quantity),ColumnRef(sales.Price))}, child=FilterNode(filter=pyarrow.compute.or_(pyarrow.compute.equal(ColumnRef(sales.Product),Literal(<pyarrow.StringScalar: 'Videogame'>)),pyarrow.compute.equal(ColumnRef(sales.Product),Literal(<pyarrow.StringScalar: 'Laptop'>))), child=ProjectNode(select=[], project={'sales.Product': ColumnRef(Product), 'sales.Quantity': ColumnRef(Quantity), 'sales.Price': ColumnRef(Price)}, child=PyArrowTableDataSource(columns=['Product', 'Quantity', 'Price'], rows=3))))"
 """
 
 import os
@@ -25,6 +28,7 @@ from ..compute import (
     CSVDataSource,
     FilterNode,
     FunctionCallExpression,
+    InnnerJoinNode,
     PaginateNode,
     ParquetDataSource,
     ProjectNode,
@@ -35,6 +39,7 @@ from ..compute import (
 )
 from ..compute import aggregate as agg
 from ..compute.base import ColumnRef, Expression, Literal, QueryPlanNode
+from ..compute.datasources import DataSourceNode
 
 
 class SQLQueryPlanner:
@@ -62,6 +67,9 @@ class SQLQueryPlanner:
         "MIN": agg.MinAggregation,
         "MAX": agg.MaxAggregation,
     }
+    JOIN_TYPES = {
+        "inner": InnnerJoinNode,
+    }
 
     def __init__(self, query: dict, catalog: dict[str, str] | None = None) -> None:
         """
@@ -71,6 +79,7 @@ class SQLQueryPlanner:
         """
         self.query = query
         self.catalog = catalog or {}
+        self._open_tables: dict[str, pa.Schema] = {}
 
     def plan(self) -> QueryPlanNode:
         """Generate a query plan from the parsed SQL query."""
@@ -211,13 +220,14 @@ class SQLQueryPlanner:
         project = {alias: p for alias, p in parsed_projections if alias is not None}
         return ProjectNode(select=select, project=project, child=child)
 
-    def _parse_from(self, from_clause: list[str]) -> QueryPlanNode:
+    def _parse_from(self, from_clause: list[dict]) -> QueryPlanNode:
         """Parse the FROM clause of the SELECT statement.
 
         Creates Datasource nodes (IE: :class:`datapyground.compute.CSVDataSource`)
-        based on the table names requested in the FROM clause.
+        or Join nodes (IE: :class:`datapyground.compute.InnerJoinNode`)
+        based on the FROM clause.
 
-        If the table name is not found in the catalog, it will try to guess
+        If table names are not found in the catalog, it will try to guess
         the file path based on the current directory.
 
         :param from_clause: The list of table names in the FROM clause.
@@ -225,26 +235,78 @@ class SQLQueryPlanner:
         if len(from_clause) != 1:
             raise ValueError("Only single table queries are supported")
 
-        tablename = from_clause[0]
+        from_entry = from_clause[0]
+        if from_entry["type"] == "identifier":
+            # Direct table reference
+            return self._open_table(from_entry)
+        elif from_entry["type"] == "join":
+            if from_entry["join_type"] != "inner":
+                raise ValueError("Only inner joins are supported")
+            left_table = self._open_table(from_entry["left_table"])
+            right_table = self._open_table(from_entry["right_table"])
+            condition = from_entry["join_condition"]
+            if condition["type"] != "comparison" or condition["op"] != "=":
+                raise ValueError("Only comparison joins are supported")
+            left_key = self._parse_identifier(condition["left"]).name
+            right_key = self._parse_identifier(condition["right"]).name
 
+            join_type = from_entry["join_type"]
+            if join_type not in self.JOIN_TYPES:
+                raise ValueError(
+                    f"Unsupported join type: {join_type}, only {self.JOIN_TYPES.keys()} are supported"
+                )
+            return self.JOIN_TYPES[join_type](
+                left_key, right_key, left_table, right_table
+            )
+        else:
+            raise ValueError(f"Unsupported FROM entry type: {from_entry['type']}")
+
+    def _open_table(self, identifier: dict) -> QueryPlanNode:
+        """Open a table from the catalog and return a data source node.
+
+        Also loads the schema of the table, to make the planner aware of the columns.
+
+        :param identifier: The identifier node of the table from the AST.
+        """
+        if identifier["type"] != "identifier":
+            raise ValueError(
+                f"Unsupported node type: {identifier['type']}, expecting an identifier"
+            )
+
+        tablename = identifier["value"]
+        if tablename in self._open_tables:
+            raise ValueError(f"Table {tablename} was already opened")
+
+        data_source: DataSourceNode | None = None
         if isinstance(self.catalog.get(tablename), (pa.Table, pa.RecordBatch)):
-            return PyArrowTableDataSource(self.catalog[tablename])
-
-        if tablename in self.catalog:
-            filename = self.catalog[tablename]
-        elif os.path.exists(tablename + ".csv"):
-            filename = tablename + ".csv"
-        elif os.path.exists(tablename + ".parquet"):
-            filename = tablename + ".parquet"
+            data_source = PyArrowTableDataSource(self.catalog[tablename])
         else:
-            filename = ""
+            if tablename in self.catalog:
+                filename = self.catalog[tablename]
+            elif os.path.exists(tablename + ".csv"):
+                filename = tablename + ".csv"
+            elif os.path.exists(tablename + ".parquet"):
+                filename = tablename + ".parquet"
+            else:
+                filename = ""
 
-        if filename.endswith(".csv"):
-            return CSVDataSource(filename)
-        elif filename.endswith(".parquet"):
-            return ParquetDataSource(filename)
-        else:
-            raise NotImplementedError(f"File format not supported: {filename}")
+            if filename.endswith(".csv"):
+                data_source = CSVDataSource(filename)
+            elif filename.endswith(".parquet"):
+                data_source = ParquetDataSource(filename)
+            else:
+                raise NotImplementedError(f"File format not supported: {filename}")
+        self._open_tables[tablename] = data_source.poll_schema()
+
+        # Wrap the data source in a ProjectNode to make all
+        # column names explicit.
+        return ProjectNode(
+            select=[],  # Keep no original columns, only the namespaced ones.
+            project={
+                f"{tablename}.{c}": col(c) for c in self._open_tables[tablename].names
+            },
+            child=data_source,
+        )
 
     def _parse_where(
         self, where_clause: dict | None, child: QueryPlanNode
@@ -300,7 +362,7 @@ class SQLQueryPlanner:
         keys = []
         descending = []
         for ordering in order_by:
-            keys.append(ordering["column"])
+            keys.append(self._parse_identifier(ordering["column"]).name)
             if ordering["order"].lower() == "desc":
                 descending.append(True)
             else:
@@ -312,7 +374,23 @@ class SQLQueryPlanner:
         """Parse an identifier node from the AST."""
         if node["type"] != "identifier":
             raise ValueError(f"Unsupported identifier type: {node['type']}")
-        return col(node["value"])
+
+        value = node["value"]
+        if "." not in value:
+            # The identifier is not properly namespaced,
+            # we need to find the table it belongs to.
+            tablename = None
+            for table, schema in self._open_tables.items():
+                if value in schema.names:
+                    if tablename is not None:
+                        raise ValueError(f"Ambiguous column name: {value}")
+                    tablename = table
+            if tablename is not None:
+                # The column belongs to a table, we need to namespace it.
+                # Otherwise, we take for granted that it's a computed or renamed column.
+                # so it's up to the user to ensure it's unique.
+                value = f"{tablename}.{value}"
+        return col(value)
 
     def _parse_literal(self, node: dict) -> Literal:
         """Parse a literal node from the AST."""

@@ -163,6 +163,13 @@ class ColumnRef(Expression):
     def __str__(self) -> str:
         return f"ColumnRef({self.name})"
 
+    __repr__ = __str__
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ColumnRef):
+            return False
+        return self.name == other.name
+
 
 col = ColumnRef
 

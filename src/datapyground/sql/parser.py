@@ -9,7 +9,10 @@ the parser will produce an AST like::
             {"type": "identifier", "value": "id"},
             {"type": "identifier", "value": "name"},
         ],
-        "from": ["users", "orders"],
+        "from": [
+            {"type": "identifier", "value": "users"},
+            {"type": "identifier", "value": "orders"}
+        ],
         "where": {
             "left": {"type": "identifier", "value": "users.id"},
             "op": {"type": "operator", "value": "="},
@@ -43,6 +46,9 @@ from .tokenize import (
     GroupByToken,
     IdentifierToken,
     InsertToken,
+    JoinOnToken,
+    JoinToken,
+    JoinTypeToken,
     LimitToken,
     LiteralToken,
     OffsetToken,
@@ -250,7 +256,7 @@ class SelectStatementParser:
                 break
         return projections
 
-    def parse_from_clause(self) -> list[str]:
+    def parse_from_clause(self) -> list[dict]:
         """Parse the FROM clause of the SQL query.
 
         The FROM clause can contain multiple tables, separated by commas.
@@ -260,13 +266,77 @@ class SelectStatementParser:
         tables = []
         while True:
             if isinstance(self.current_token, IdentifierToken):
-                tables.append(self.current_token.value)
+                left_table = self.current_token.value
                 self.advance()
+                if isinstance(self.current_token, (JoinTypeToken, JoinToken)):
+                    tables.append(self.parse_join_clause(left_table))
+                else:
+                    tables.append({"type": "identifier", "value": left_table})
             else:
                 raise SQLParseError("Expected table name in FROM clause")
             if not self.consume_punctuation(","):
                 break
         return tables
+
+    def parse_join_clause(self, left_table: str) -> dict:
+        """Parse a JOIN clause from the SQL query.
+
+        A JOIN clause starts with the optional Join Type: INNER, LEFT, RIGHT, FULL, CROSS, NATURAL
+        if missing, INNER JOIN is assumed.
+
+        The JOIN clause is followed by the table name to join with, and optionally the ON keyword
+        followed by an expression constituting the join condition.
+
+        Returns a dictionary representing the join clause, looking like::
+
+            {
+                "type": "join",
+                "join_type": "inner",
+                "left_table": {"type": "identifier", "value": "users"},
+                "right_table": {"type": "identifier", "value": "orders"},
+                "join_condition": {
+                    "left": {"type": "identifier", "value": "users.id"},
+                    "op": {"type": "operator", "value": "="},
+                    "right": {"type": "identifier", "value": "orders.user_id"},
+                }
+            }
+
+        :param left_table: The name of the left table in the join clause.
+        """
+        # First we expect to find the optional join type:
+        #  INNER, LEFT, RIGHT, FULL, CROSS, NATURAL
+        join_type = []
+        while isinstance(self.current_token, JoinTypeToken):
+            join_type.append(self.current_token.value)
+            self.advance()
+        if not join_type:
+            join_type = ["INNER"]
+
+        # Next we expect to find the JOIN keyword
+        if not isinstance(self.current_token, JoinToken):
+            raise SQLParseError("Expected JOIN keyword in JOIN clause")
+        self.advance()
+
+        # Next we expect to find the right table name
+        if not isinstance(self.current_token, IdentifierToken):
+            raise SQLParseError("Expected table name in JOIN clause")
+        right_table = self.current_token.value
+        self.advance()
+
+        # Next we expect to find the optional ON keyword
+        if isinstance(self.current_token, JoinOnToken):
+            self.advance()
+            join_condition = self.parse_expression()
+        else:
+            join_condition = None
+
+        return {
+            "type": "join",
+            "join_type": "_".join((k.lower() for k in join_type)),
+            "left_table": {"type": "identifier", "value": left_table},
+            "right_table": {"type": "identifier", "value": right_table},
+            "join_condition": join_condition,
+        }
 
     def parse_where_clause(self) -> dict:
         """Parse the WHERE clause of the SQL query.
@@ -309,8 +379,8 @@ class SelectStatementParser:
 
         The result will look like::
 
-            [{"type": "ordering", "column": "id", "order": "ASC"},
-             {"type": "ordering", "column": "name", "order": "DESC"}]
+            [{"type": "ordering", "column": {"type": "identifier", "value": "id"}, "order": "ASC"},
+             {"type": "ordering", "column": {"type": "identifier", "value": "name"}, "order": "DESC"}]
         """
         order_by_columns = []
         while True:
@@ -322,7 +392,11 @@ class SelectStatementParser:
                     sort_order = self.current_token.value.upper()
                     self.advance()
                 order_by_columns.append(
-                    {"type": "ordering", "column": column_name, "order": sort_order}
+                    {
+                        "type": "ordering",
+                        "column": {"type": "identifier", "value": column_name},
+                        "order": sort_order,
+                    }
                 )
             else:
                 raise SQLParseError("Expected column name in ORDER BY clause")

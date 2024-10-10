@@ -8,6 +8,8 @@ They are used to do things like loading
 data from CSV files or equivalent operations
 """
 
+from abc import abstractmethod
+
 import pyarrow as pa
 import pyarrow.csv
 import pyarrow.parquet
@@ -15,7 +17,16 @@ import pyarrow.parquet
 from .base import QueryPlanNode
 
 
-class CSVDataSource(QueryPlanNode):
+class DataSourceNode(QueryPlanNode):
+    """Base class for nodes that load data from a source."""
+
+    @abstractmethod
+    def poll_schema(self) -> pa.Schema:
+        """Poll the schema of the data source without loading its content."""
+        ...
+
+
+class CSVDataSource(DataSourceNode):
     """Load data from a CSV file.
 
     Given a local CSV file path, load the content,
@@ -43,8 +54,13 @@ class CSVDataSource(QueryPlanNode):
             for batch in reader:
                 yield batch
 
+    def poll_schema(self) -> pa.Schema:
+        """Poll the schema of the CSV file."""
+        with pa.csv.open_csv(self.filename) as reader:
+            return reader.schema
 
-class ParquetDataSource(QueryPlanNode):
+
+class ParquetDataSource(DataSourceNode):
     """Load data from a Parquet file.
 
     Given a local parquet file path, load the content,
@@ -66,12 +82,16 @@ class ParquetDataSource(QueryPlanNode):
 
     def batches(self) -> QueryPlanNode.RecordBatchesGenerator:
         """Open CSV file and emit the batches."""
-        yield from pa.parquet.ParquetFile(self.filename).iter_batches(
-            batch_size=self.batch_size
-        )
+        with pa.parquet.ParquetFile(self.filename) as reader:
+            yield from reader.iter_batches(batch_size=self.batch_size)
+
+    def poll_schema(self) -> pa.Schema:
+        """Poll the schema of the Parquet file."""
+        with pa.parquet.ParquetFile(self.filename) as reader:
+            return reader.schema_arrow
 
 
-class PyArrowTableDataSource(QueryPlanNode):
+class PyArrowTableDataSource(DataSourceNode):
     """Load data from an in-memory pyarrow.Table or pyarrow.RecordBatch.
 
     Given a :class:`pyarrow.Table` or `pyarrow.RecordBatch` object,
@@ -94,3 +114,7 @@ class PyArrowTableDataSource(QueryPlanNode):
             yield self.table
         else:
             yield from self.table.to_batches()
+
+    def poll_schema(self) -> pa.Schema:
+        """Poll the schema of the Table."""
+        return self.table.schema

@@ -23,7 +23,7 @@ def test_select_query():
                 "alias": None,
             },
         ],
-        "from": ["users"],
+        "from": [{"type": "identifier", "value": "users"}],
         "where": {
             "type": "comparison",
             "left": {"type": "identifier", "value": "age"},
@@ -58,7 +58,7 @@ def test_select_query_with_group_by():
                 "alias": None,
             },
         ],
-        "from": ["users"],
+        "from": [{"type": "identifier", "value": "users"}],
         "where": {
             "type": "comparison",
             "left": {"type": "identifier", "value": "age"},
@@ -93,7 +93,7 @@ def test_select_query_without_where():
                 "alias": None,
             },
         ],
-        "from": ["users"],
+        "from": [{"type": "identifier", "value": "users"}],
         "where": None,
         "group_by": None,
         "order_by": None,
@@ -123,7 +123,10 @@ def test_select_query_with_multiple_tables():
                 "alias": None,
             },
         ],
-        "from": ["users", "orders"],
+        "from": [
+            {"type": "identifier", "value": "users"},
+            {"type": "identifier", "value": "orders"},
+        ],
         "where": {
             "type": "comparison",
             "left": {"type": "identifier", "value": "users.id"},
@@ -235,10 +238,16 @@ def test_select_query_with_order_by():
                 "alias": None,
             },
         ],
-        "from": ["users"],
+        "from": [{"type": "identifier", "value": "users"}],
         "where": None,
         "group_by": None,
-        "order_by": [{"type": "ordering", "column": "age", "order": "DESC"}],
+        "order_by": [
+            {
+                "type": "ordering",
+                "column": {"type": "identifier", "value": "age"},
+                "order": "DESC",
+            }
+        ],
         "limit": None,
         "offset": None,
     }
@@ -265,7 +274,7 @@ def test_select_query_with_limit():
                 "alias": None,
             },
         ],
-        "from": ["users"],
+        "from": [{"type": "identifier", "value": "users"}],
         "where": None,
         "group_by": None,
         "order_by": None,
@@ -295,7 +304,7 @@ def test_select_query_with_offset():
                 "alias": None,
             },
         ],
-        "from": ["users"],
+        "from": [{"type": "identifier", "value": "users"}],
         "where": None,
         "group_by": None,
         "order_by": None,
@@ -325,7 +334,7 @@ def test_select_query_with_all_clauses():
                 "alias": None,
             },
         ],
-        "from": ["users"],
+        "from": [{"type": "identifier", "value": "users"}],
         "where": {
             "type": "comparison",
             "left": {"type": "identifier", "value": "age"},
@@ -333,7 +342,13 @@ def test_select_query_with_all_clauses():
             "right": {"type": "literal", "value": 18},
         },
         "group_by": [{"type": "identifier", "value": "age"}],
-        "order_by": [{"type": "ordering", "column": "name", "order": "ASC"}],
+        "order_by": [
+            {
+                "type": "ordering",
+                "column": {"type": "identifier", "value": "name"},
+                "order": "ASC",
+            }
+        ],
         "limit": 10,
         "offset": 5,
     }
@@ -364,7 +379,7 @@ def test_select_query_complex():
                 "alias": "Total",
             },
         ],
-        "from": ["transactions"],
+        "from": [{"type": "identifier", "value": "transactions"}],
         "where": {
             "type": "conjunction",
             "op": "OR",
@@ -490,3 +505,52 @@ def test_select_query_invalid_operator():
     with pytest.raises(SQLParseError) as excinfo:
         parser.parse()
     assert "Unexpected token: IdentifierToken('OP')" in str(excinfo.value)
+
+
+def test_select_query_with_simple_table_and_join():
+    query = "SELECT users.id, users.name, orders.amount FROM unused, users JOIN orders ON users.id = orders.user_id"
+    parser = Parser(query)
+    ast = parser.parse()
+
+    expected_ast = {
+        "type": "select",
+        "projections": [
+            {
+                "type": "projection",
+                "value": {"type": "identifier", "value": "users.id"},
+                "alias": None,
+            },
+            {
+                "type": "projection",
+                "value": {"type": "identifier", "value": "users.name"},
+                "alias": None,
+            },
+            {
+                "type": "projection",
+                "value": {"type": "identifier", "value": "orders.amount"},
+                "alias": None,
+            },
+        ],
+        "from": [
+            {"type": "identifier", "value": "unused"},
+            {
+                "type": "join",
+                "join_type": "inner",
+                "left_table": {"type": "identifier", "value": "users"},
+                "right_table": {"type": "identifier", "value": "orders"},
+                "join_condition": {
+                    "type": "comparison",
+                    "left": {"type": "identifier", "value": "users.id"},
+                    "op": "=",
+                    "right": {"type": "identifier", "value": "orders.user_id"},
+                },
+            },
+        ],
+        "where": None,
+        "group_by": None,
+        "order_by": None,
+        "limit": None,
+        "offset": None,
+    }
+
+    assert ast == expected_ast

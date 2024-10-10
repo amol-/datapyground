@@ -55,7 +55,7 @@ would be represented as an AST like::
             {'type': 'identifier', 'value': 'id'},
             {'type': 'identifier', 'value': 'name'}
         ],
-        'from': ['users'],
+        'from': [{"type": "identifier", "value": "users"}],
         'where': {
             'left': {'type': 'identifier', 'value': 'age'},
             'op': '>=',

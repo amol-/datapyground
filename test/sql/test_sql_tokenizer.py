@@ -5,6 +5,9 @@ from datapyground.sql.tokenize import (
     GroupByToken,
     IdentifierToken,
     InsertToken,
+    JoinOnToken,
+    JoinToken,
+    JoinTypeToken,
     LimitToken,
     LiteralToken,
     OffsetToken,
@@ -233,3 +236,102 @@ def test_token_equality():
     assert token1 == token2
     assert token1 != token3
     assert token1 != non_token
+
+
+def test_tokenizer_inner_join_query():
+    query = "SELECT id, name FROM table1 INNER JOIN table2 ON table1.id = table2.id"
+    tokenizer = Tokenizer(query)
+    tokens = tokenizer.tokenize()
+
+    expected_tokens = [
+        SelectToken("SELECT"),
+        IdentifierToken("id"),
+        PunctuationToken(","),
+        IdentifierToken("name"),
+        FromToken("FROM"),
+        IdentifierToken("table1"),
+        JoinTypeToken("INNER"),
+        JoinToken("JOIN"),
+        IdentifierToken("table2"),
+        JoinOnToken("ON"),
+        IdentifierToken("table1.id"),
+        OperatorToken("="),
+        IdentifierToken("table2.id"),
+    ]
+
+    assert tokens == expected_tokens
+
+
+def test_tokenizer_left_join_query():
+    query = "SELECT id, name FROM table1 LEFT JOIN table2 ON table1.id = table2.id"
+    tokenizer = Tokenizer(query)
+    tokens = tokenizer.tokenize()
+
+    expected_tokens = [
+        SelectToken("SELECT"),
+        IdentifierToken("id"),
+        PunctuationToken(","),
+        IdentifierToken("name"),
+        FromToken("FROM"),
+        IdentifierToken("table1"),
+        JoinTypeToken("LEFT"),
+        JoinToken("JOIN"),
+        IdentifierToken("table2"),
+        JoinOnToken("ON"),
+        IdentifierToken("table1.id"),
+        OperatorToken("="),
+        IdentifierToken("table2.id"),
+    ]
+
+    assert tokens == expected_tokens
+
+
+def test_tokenizer_right_join_query():
+    query = "SELECT id, name FROM table1 RIGHT JOIN table2 ON table1.id = table2.id"
+    tokenizer = Tokenizer(query)
+    tokens = tokenizer.tokenize()
+
+    expected_tokens = [
+        SelectToken("SELECT"),
+        IdentifierToken("id"),
+        PunctuationToken(","),
+        IdentifierToken("name"),
+        FromToken("FROM"),
+        IdentifierToken("table1"),
+        JoinTypeToken("RIGHT"),
+        JoinToken("JOIN"),
+        IdentifierToken("table2"),
+        JoinOnToken("ON"),
+        IdentifierToken("table1.id"),
+        OperatorToken("="),
+        IdentifierToken("table2.id"),
+    ]
+
+    assert tokens == expected_tokens
+
+
+def test_tokenizer_full_outer_join_query():
+    query = (
+        "SELECT id, name FROM table1 FULL OUTER JOIN table2 ON table1.id = table2.id"
+    )
+    tokenizer = Tokenizer(query)
+    tokens = tokenizer.tokenize()
+
+    expected_tokens = [
+        SelectToken("SELECT"),
+        IdentifierToken("id"),
+        PunctuationToken(","),
+        IdentifierToken("name"),
+        FromToken("FROM"),
+        IdentifierToken("table1"),
+        JoinTypeToken("FULL"),
+        JoinTypeToken("OUTER"),
+        JoinToken("JOIN"),
+        IdentifierToken("table2"),
+        JoinOnToken("ON"),
+        IdentifierToken("table1.id"),
+        OperatorToken("="),
+        IdentifierToken("table2.id"),
+    ]
+
+    assert tokens == expected_tokens
