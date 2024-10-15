@@ -13,7 +13,7 @@ def test_sql_query_on_pyarrow_table():
         "adjusted_avg_age": [31, 36, 46],
     }
 
-    sql = "SELECT id AS id, COUNT(id) AS count, AVG(age) AS average_age, average_age + 1 AS adjusted_avg_age FROM users GROUP BY id"
+    sql = "SELECT id, COUNT(id) AS count, AVG(age) AS average_age, average_age + 1 AS adjusted_avg_age FROM users GROUP BY id"
     query = Parser(sql).parse()
     planner = SQLQueryPlanner(query, catalog={"users": data})
     plan = planner.plan()

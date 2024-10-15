@@ -14,7 +14,7 @@ Example:
     >>> query = Parser(sql).parse()
     >>> planner = SQLQueryPlanner(query, catalog={"sales": sales_table})
     >>> str(planner.plan())
-    "ProjectNode(select=['sales.Product', 'sales.Quantity', 'sales.Price'], project={'Total': pyarrow.compute.multiply(ColumnRef(sales.Quantity),ColumnRef(sales.Price))}, child=FilterNode(filter=pyarrow.compute.or_(pyarrow.compute.equal(ColumnRef(sales.Product),Literal(<pyarrow.StringScalar: 'Videogame'>)),pyarrow.compute.equal(ColumnRef(sales.Product),Literal(<pyarrow.StringScalar: 'Laptop'>))), child=ProjectNode(select=[], project={'sales.Product': ColumnRef(Product), 'sales.Quantity': ColumnRef(Quantity), 'sales.Price': ColumnRef(Price)}, child=PyArrowTableDataSource(columns=['Product', 'Quantity', 'Price'], rows=3))))"
+    "ProjectNode(select=[], project={'Product': ColumnRef(sales.Product), 'Quantity': ColumnRef(sales.Quantity), 'Price': ColumnRef(sales.Price), 'Total': pyarrow.compute.multiply(ColumnRef(sales.Quantity),ColumnRef(sales.Price))}, child=FilterNode(filter=pyarrow.compute.or_(pyarrow.compute.equal(ColumnRef(sales.Product),Literal(<pyarrow.StringScalar: 'Videogame'>)),pyarrow.compute.equal(ColumnRef(sales.Product),Literal(<pyarrow.StringScalar: 'Laptop'>))), child=ProjectNode(select=[], project={'sales.Product': ColumnRef(Product), 'sales.Quantity': ColumnRef(Quantity), 'sales.Price': ColumnRef(Price)}, child=PyArrowTableDataSource(columns=['Product', 'Quantity', 'Price'], rows=3))))"
 """
 
 import os
@@ -71,7 +71,9 @@ class SQLQueryPlanner:
         "inner": InnnerJoinNode,
     }
 
-    def __init__(self, query: dict, catalog: dict[str, str] | None = None) -> None:
+    def __init__(
+        self, query: dict, catalog: dict[str, str | pa.Table] | None = None
+    ) -> None:
         """
         :param query: The parsed SQL query AST as returned by :class:`datapyground.sql.Parser`.
         :param catalog: An optional dictionary mapping table names to file paths.
@@ -203,12 +205,20 @@ class SQLQueryPlanner:
             projection = node["value"]
             alias = node["alias"]
             expr = self._parse_expression(projection)
-            if alias is None and not isinstance(expr, ColumnRef):
-                raise ValueError(
-                    "Projection must have an alias, when it's not a column reference"
-                )
+            if isinstance(expr, ColumnRef):
+                if alias is None and expr.name != projection["value"]:
+                    # If the ColumnRef name we get is not the same as the projected column name,
+                    # it means that the column was namespaced by _parse_identifier but the user
+                    # asked for it without the namespace, so we need to keep the original name.
+                    alias = projection["value"]
             elif isinstance(expr, agg.Aggregation):
                 raise ValueError("Aggregations must be processed by the AggregateNode")
+            else:
+                if alias is None:
+                    raise ValueError(
+                        "Projection must have an alias, when it's not a column reference"
+                    )
+
             return alias, expr
 
         parsed_projections = [_parse_projection(p) for p in projections]

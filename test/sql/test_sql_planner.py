@@ -34,7 +34,11 @@ def test_simple_select():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "users.name"]
+    assert plan.select == []
+    assert plan.project == {
+        "id": ColumnRef("users.id"),
+        "name": ColumnRef("users.name"),
+    }
     assert isinstance(plan.child, ProjectNode)
     assert plan.child.select == []
     assert plan.child.project == {
@@ -52,7 +56,11 @@ def test_select_with_where():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "users.name"]
+    assert plan.select == []
+    assert plan.project == {
+        "id": ColumnRef("users.id"),
+        "name": ColumnRef("users.name"),
+    }
     assert isinstance(plan.child, FilterNode)
     assert isinstance(plan.child.expression, FunctionCallExpression)
     assert plan.child.expression.func == pc.greater_equal
@@ -64,8 +72,10 @@ def test_select_with_projection_expression():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "users.name"]
-    assert "next_age" in plan.project
+    assert plan.select == []
+    assert list(plan.project.keys()) == ["id", "name", "next_age"]
+    assert plan.project["id"] == ColumnRef("users.id")
+    assert plan.project["name"] == ColumnRef("users.name")
     assert isinstance(plan.project["next_age"], FunctionCallExpression)
     assert plan.project["next_age"].func == pc.add
 
@@ -76,7 +86,11 @@ def test_select_with_logical_and():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "users.name"]
+    assert plan.select == []
+    assert plan.project == {
+        "id": ColumnRef("users.id"),
+        "name": ColumnRef("users.name"),
+    }
     assert isinstance(plan.child, FilterNode)
     assert isinstance(plan.child.expression, FunctionCallExpression)
     assert plan.child.expression.func == pc.and_
@@ -88,7 +102,11 @@ def test_select_with_logical_or():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "users.name"]
+    assert plan.select == []
+    assert plan.project == {
+        "id": ColumnRef("users.id"),
+        "name": ColumnRef("users.name"),
+    }
     assert isinstance(plan.child, FilterNode)
     assert isinstance(plan.child.expression, FunctionCallExpression)
     assert plan.child.expression.func == pc.or_
@@ -133,7 +151,11 @@ def test_select_with_order_by():
     assert isinstance(plan, SortNode)
     assert plan.sorting == [("users.age", "descending")]
     assert isinstance(plan.child, ProjectNode)
-    assert plan.child.select == ["users.id", "users.name"]
+    assert plan.child.select == []
+    assert plan.child.project == {
+        "id": ColumnRef("users.id"),
+        "name": ColumnRef("users.name"),
+    }
 
 
 def test_select_with_limit():
@@ -145,7 +167,11 @@ def test_select_with_limit():
     assert plan.length == 10
     assert plan.offset == 0
     assert isinstance(plan.child, ProjectNode)
-    assert plan.child.select == ["users.id", "users.name"]
+    assert plan.child.select == []
+    assert plan.child.project == {
+        "id": ColumnRef("users.id"),
+        "name": ColumnRef("users.name"),
+    }
 
 
 def test_select_with_offset():
@@ -157,7 +183,11 @@ def test_select_with_offset():
     assert plan.length == PaginateNode.INF
     assert plan.offset == 5
     assert isinstance(plan.child, ProjectNode)
-    assert plan.child.select == ["users.id", "users.name"]
+    assert plan.child.select == []
+    assert plan.child.project == {
+        "id": ColumnRef("users.id"),
+        "name": ColumnRef("users.name"),
+    }
 
 
 def test_select_with_limit_and_offset():
@@ -169,7 +199,11 @@ def test_select_with_limit_and_offset():
     assert plan.length == 10
     assert plan.offset == 5
     assert isinstance(plan.child, ProjectNode)
-    assert plan.child.select == ["users.id", "users.name"]
+    assert plan.child.select == []
+    assert plan.child.project == {
+        "id": ColumnRef("users.id"),
+        "name": ColumnRef("users.name"),
+    }
 
 
 def test_select_with_group_by_count():
@@ -178,7 +212,7 @@ def test_select_with_group_by_count():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "count"]
+    assert plan.select == ["count"]
     assert isinstance(plan.child, AggregateNode)
     assert plan.child.keys == ["users.id"]
     assert "count" in plan.child.aggregations
@@ -191,7 +225,7 @@ def test_select_with_group_by_avg():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "average_age"]
+    assert plan.select == ["average_age"]
     assert isinstance(plan.child, AggregateNode)
     assert plan.child.keys == ["users.id"]
     assert "average_age" in plan.child.aggregations
@@ -206,7 +240,7 @@ def test_select_with_group_by_multiple_aggregations():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "count", "average_age"]
+    assert plan.select == ["count", "average_age"]
     assert isinstance(plan.child, AggregateNode)
     assert plan.child.keys == ["users.id"]
     assert "average_age" in plan.child.aggregations
@@ -221,7 +255,7 @@ def test_select_with_group_by_and_projection():
     planner = SQLQueryPlanner(query, catalog={"users": users_table})
     plan = planner.plan()
     assert isinstance(plan, ProjectNode)
-    assert plan.select == ["users.id", "count", "average_age"]
+    assert plan.select == ["count", "average_age"]
     assert "adjusted_avg_age" in plan.project
     assert isinstance(plan.child, AggregateNode)
     assert plan.child.keys == ["users.id"]
