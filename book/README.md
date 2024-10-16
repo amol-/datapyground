@@ -9,3 +9,4 @@ The book tries to be a lightweight and quick introduction to the topic allowing 
 ## Published Chapters
 
 * [Chapter 1: Introduction & Compute Engine](https://colab.research.google.com/drive/1mwjmueuBKW4LEzvDNRXbejMRzQtwgrKz?usp=sharing)
+* [Chapter 2: Key Column Operations](https://colab.research.google.com/drive/1Z_NsqbhqW-pHliAKQ-gKCpA1DW4CI6KP?usp=sharing)
